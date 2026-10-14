@@ -132,7 +132,7 @@ Output in `release/`:
 - `TSAT-0.1.1-x64-nsis.exe` — installer with directory selection and shortcuts.
 - `TSAT-0.1.1-x64-portable.exe` — no installation required.
 
-The **Windows installer and portable** workflow can be run manually and runs on version tags. It builds both executables, launches the packaged application, checks imports/ZIP export, DPAPI, persistence and localization, exercises the document/icon/deletion workflows, and produces SHA-256 checksums. Successful builds upload a `TSAT-Windows-x64` artifact. Binaries can be attached only to an explicitly prepared draft release targeting the exact build SHA. Publishing that release remains an explicit action.
+The **Windows installer and portable** workflow can be run manually and runs on version tags and Arena working-branch pushes. It builds both executables, launches the packaged application, checks imports/ZIP export, DPAPI, persistence and localization, exercises the document/icon/deletion workflows, and produces SHA-256 checksums. Successful builds upload a `TSAT-Windows-x64` artifact. Binaries can be attached only to an explicitly prepared draft release targeting the exact build SHA. Publishing that release remains an explicit action.
 
 **Binaries are not code-signed.** Windows SmartScreen may warn about an unknown publisher. Automated smoke tests do not replace manual install/uninstall and live-publication testing. There is no automatic updater.
 
