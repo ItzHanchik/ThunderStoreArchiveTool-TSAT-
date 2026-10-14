@@ -12,7 +12,7 @@
   <a href="https://github.com/ItzHanchik/ThunderStoreArchiveTool-TSAT-/issues">Feedback</a>
 </p>
 
-> **Early access · 0.1.1 bugfix update.** Not an official Thunderstore client. English is the default interface and documentation language; Russian remains available. Existing language preferences and project content are preserved. Direct API publishing is experimental; mocked contract tests are not proof of a successful live publication. You can always export a ZIP and publish on the website.
+> **Early access · 0.1.2 publishing hotfix.** Not an official Thunderstore client. English is the default interface and documentation language; Russian remains available. Existing language preferences and project content are preserved. Direct API publishing is experimental; mocked contract tests are not proof of a successful live publication. You can always export a ZIP and publish on the website.
 
 ## Features
 
@@ -112,7 +112,7 @@ The source image and design settings stay in the local project for later editing
 
 Tokens are encrypted using Electron `safeStorage` (**Windows DPAPI**), never returned to the renderer, and never included in IndexedDB or ZIP exports. Storage is blocked if secure OS encryption is unavailable. “Saved” does not mean “permissions verified.” The online catalog can check authentication and list teams; the server makes the final authorization decision. Deleting a saved token does not revoke it on the website.
 
-Publishing follows `initiate-upload → multipart PUT → finish-upload → submission/submit`. The bearer token goes only to Thunderstore's API, never to storage hosts. Uploads require HTTPS, an allowed storage hostname, non-overlapping parts covering the entire ZIP, and no redirects. The 0.1.1 update adds Backblaze B2 S3 endpoints to the existing AWS S3 / Cloudflare R2 / Thunderstore allowlist. Unknown hosts are still blocked; the error reports only the hostname, not signed URL credentials.
+Publishing follows `initiate-upload → multipart PUT → finish-upload → submission/submit`. The bearer token goes only to Thunderstore's API, never to storage hosts. Uploads require HTTPS, an allowed storage hostname, non-overlapping parts covering the entire ZIP, and no redirects. The storage allowlist supports AWS S3, Cloudflare R2, Thunderstore subdomains, Backblaze B2 S3 endpoints, and DigitalOcean Spaces regional/bucket endpoints (including `fra1.digitaloceanspaces.com`, added in 0.1.2). DigitalOcean CDN endpoints and plaintext HTTP are not accepted for uploading. Unknown hosts are still blocked; the error reports only the hostname, not signed URL credentials.
 
 **If the connection fails during final submission, check the package page before retrying**: the version might already have been accepted. Real-world publication still needs verification with a valid team and an unpublished package version. No live mod is published by the test suite.
 
@@ -129,8 +129,8 @@ npm run dist:win -- --publish never
 
 Output in `release/`:
 
-- `TSAT-0.1.1-x64-nsis.exe` — installer with directory selection and shortcuts.
-- `TSAT-0.1.1-x64-portable.exe` — no installation required.
+- `TSAT-0.1.2-x64-nsis.exe` — installer with directory selection and shortcuts.
+- `TSAT-0.1.2-x64-portable.exe` — no installation required.
 
 The **Windows installer and portable** workflow can be run manually and runs on version tags and Arena working-branch pushes. It builds both executables, launches the packaged application, checks imports/ZIP export, DPAPI, persistence and localization, exercises the document/icon/deletion workflows, and produces SHA-256 checksums. Successful builds upload a `TSAT-Windows-x64` artifact. Binaries can be attached only to an explicitly prepared draft release targeting the exact build SHA. Publishing that release remains an explicit action.
 

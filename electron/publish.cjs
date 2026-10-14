@@ -25,11 +25,15 @@ function allowedUpload(url) {
       !u.password &&
       (!u.port || u.port === "443") &&
       // Thunderstore can return presigned URLs for S3-compatible storage,
-      // including Backblaze B2. Never accept arbitrary hosts or redirects.
+      // including Backblaze B2 and DigitalOcean Spaces. Never accept arbitrary
+      // hosts, CDN endpoints, plaintext HTTP, or redirects.
       ([".amazonaws.com", ".r2.cloudflarestorage.com", ".thunderstore.io"].some(
         (domain) => u.hostname.endsWith(domain),
       ) ||
         /^(?:[a-z0-9][a-z0-9.-]*\.)?s3\.[a-z0-9-]+\.backblazeb2\.com$/.test(
+          u.hostname,
+        ) ||
+        /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)?[a-z]{3}[1-9][0-9]*\.digitaloceanspaces\.com$/.test(
           u.hostname,
         ))
     );

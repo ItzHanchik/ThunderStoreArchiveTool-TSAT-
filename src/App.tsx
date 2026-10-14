@@ -356,7 +356,7 @@ export default function App() {
           </button>
           <div className="sidebar-version">
             <span>
-              <span className="status-dot" /> TSAT v0.1.1
+              <span className="status-dot" /> TSAT v0.1.2
             </span>
             <span>EARLY ACCESS</span>
           </div>

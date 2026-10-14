@@ -37,6 +37,10 @@ describe("publishing security and contract", () => {
     "https://s3.us-west-004.backblazeb2.com/bucket/key?X-Amz-Signature=secret",
     "https://thunderstore.s3.us-west-004.backblazeb2.com/key",
     "https://bucket.r2.cloudflarestorage.com/key",
+    "https://fra1.digitaloceanspaces.com/thunderstore-usermedia/key?X-Amz-Signature=secret",
+    "https://thunderstore-usermedia.fra1.digitaloceanspaces.com/key?uploadId=upload&partNumber=1",
+    "https://nyc3.digitaloceanspaces.com/bucket/key",
+    "https://thunderstore-usermedia.sgp1.digitaloceanspaces.com:443/key",
   ])("accepts supported S3-compatible storage %s", (url) =>
     expect(allowedUpload(url)).toBe(true),
   );
@@ -49,6 +53,15 @@ describe("publishing security and contract", () => {
     "https://localhost/key",
     "file:///etc/passwd",
     "https://evilbackblazeb2.com/key",
+    "http://fra1.digitaloceanspaces.com/key",
+    "https://user:pass@fra1.digitaloceanspaces.com/key",
+    "https://fra1.digitaloceanspaces.com:444/key",
+    "https://fra1.digitaloceanspaces.com.evil.test/key",
+    "https://evildigitaloceanspaces.com/key",
+    "https://digitaloceanspaces.com/key",
+    "https://fra1.cdn.digitaloceanspaces.com/key",
+    "https://bucket.fra1.cdn.digitaloceanspaces.com/key",
+    "https://nested.bucket.fra1.digitaloceanspaces.com/key",
   ])("rejects unsafe storage variant %s", (url) =>
     expect(allowedUpload(url)).toBe(false),
   );
@@ -56,7 +69,12 @@ describe("publishing security and contract", () => {
     expect(() =>
       validateMetadata({ ...metadata, community: "../bad" }),
     ).toThrow());
-  it.each(["bucket.s3.amazonaws.com", "s3.us-west-004.backblazeb2.com"])(
+  it.each([
+    "bucket.s3.amazonaws.com",
+    "s3.us-west-004.backblazeb2.com",
+    "fra1.digitaloceanspaces.com",
+    "thunderstore-usermedia.fra1.digitaloceanspaces.com",
+  ])(
     "follows multipart flow on %s without leaking bearer to storage",
     async (host) => {
       const network = vi
@@ -99,6 +117,78 @@ describe("publishing security and contract", () => {
       expect(result.url).toBe("https://thunderstore.io/c/valheim/p/Team/Test/");
     },
   );
+  it("uploads a presigned DigitalOcean multipart plan without rewriting URLs", async () => {
+    const urls = [1, 2].map(
+      (part) =>
+        `https://fra1.digitaloceanspaces.com/thunderstore-usermedia/file?uploadId=example&partNumber=${part}&X-Amz-Signature=private${part}`,
+    );
+    const network = vi
+      .fn()
+      .mockResolvedValueOnce(
+        json({
+          user_media: { uuid },
+          upload_urls: [
+            { url: urls[1], offset: 2, length: 2, part_number: 2 },
+            { url: urls[0], offset: 0, length: 2, part_number: 1 },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(new Response("", { headers: { etag: '"first"' } }))
+      .mockResolvedValueOnce(
+        new Response("", { headers: { etag: '"second"' } }),
+      )
+      .mockResolvedValueOnce(json({}))
+      .mockResolvedValueOnce(json({ package_version: { name: "Test" } }));
+    await publishPackage(
+      Buffer.from("PKxx"),
+      metadata,
+      "secret-token",
+      network,
+    );
+    expect(network).toHaveBeenCalledTimes(5);
+    for (const [index, body] of ["PK", "xx"].entries()) {
+      const [url, options] = network.mock.calls[index + 1];
+      expect(url).toBe(urls[index]);
+      expect(options.body.toString()).toBe(body);
+      expect(options.method).toBe("PUT");
+      expect(options.redirect).toBe("error");
+      expect(options.headers["Content-Length"]).toBe("2");
+      expect(options.headers.Authorization).toBeUndefined();
+    }
+    expect(JSON.parse(network.mock.calls[3][1].body)).toEqual({
+      parts: [
+        { ETag: '"first"', PartNumber: 1 },
+        { ETag: '"second"', PartNumber: 2 },
+      ],
+    });
+    expect(network.mock.calls[4][0]).toContain("submission/submit/");
+  });
+  it("aborts an insecure DigitalOcean plan without uploading package bytes", async () => {
+    const network = vi
+      .fn()
+      .mockResolvedValueOnce(
+        json({
+          user_media: { uuid },
+          upload_urls: [
+            {
+              url: "http://fra1.digitaloceanspaces.com/key",
+              offset: 0,
+              length: 4,
+              part_number: 1,
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(json({}));
+    await expect(
+      publishPackage(Buffer.from("PKxx"), metadata, "secret", network),
+    ).rejects.toThrow();
+    expect(network).toHaveBeenCalledTimes(2);
+    expect(network.mock.calls[1][0]).toContain("abort-upload/");
+    expect(
+      network.mock.calls.every(([, options]) => options.method === "POST"),
+    ).toBe(true);
+  });
   it("aborts invalid upload plans without sending package bytes", async () => {
     const network = vi
       .fn()
