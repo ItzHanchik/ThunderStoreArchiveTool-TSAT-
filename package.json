@@ -1,0 +1,70 @@
+{
+  "name": "tsat",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ThunderStore Archive Tool — a calmer workspace for mod creators",
+  "author": "ItzHanchik",
+  "license": "MIT",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "desktop": "npm run build && electron .",
+    "test": "vitest run",
+    "typecheck": "tsc -b",
+    "dist:win": "npm run build && electron-builder --win nsis portable --x64"
+  },
+  "dependencies": {
+    "fflate": "^0.8.2",
+    "idb-keyval": "^6.2.1",
+    "lucide-react": "^0.468.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-markdown": "^10.1.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "electron": "^44.7.2",
+    "electron-builder": "^26.0.12",
+    "prettier": "^3.9.10",
+    "typescript": "~5.7.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.4"
+  },
+  "build": {
+    "appId": "io.github.itzhanchik.tsat",
+    "productName": "TSAT",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "icon": "public/icon.png",
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "artifactName": "TSAT-${version}-${arch}-setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "artifactName": "TSAT-${version}-${arch}-nsis.${ext}"
+    },
+    "portable": {
+      "artifactName": "TSAT-${version}-${arch}-portable.exe"
+    }
+  },
+  "type": "module"
+}
