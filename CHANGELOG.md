@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.2 — 2026-10-14
+
+Publishing hotfix.
+
+### Fixed
+- Accept DigitalOcean Spaces HTTPS regional and virtual-hosted bucket upload endpoints, including `fra1.digitaloceanspaces.com`, returned by Thunderstore's upload API.
+- Keep signed URLs unchanged, bearer tokens restricted to Thunderstore's API, redirects disabled, and full multipart archive coverage validation enforced.
+- Continue rejecting HTTP, credentials in URLs, nonstandard ports, lookalike hosts, and DigitalOcean CDN endpoints.
+- Add regression coverage for the reported host, bucket/region variants, multiple presigned parts, token separation, and aborting insecure plans. All 113 unit/mocked API tests pass.
+
 ## 0.1.1 — 2026-10-14
 
 Bugfix and usability update.
