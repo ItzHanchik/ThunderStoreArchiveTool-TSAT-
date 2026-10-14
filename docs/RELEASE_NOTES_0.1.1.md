@@ -7,7 +7,7 @@ An early-access patch focused on publishing, English-first onboarding, and every
 - **Publishing:** accept Backblaze B2 S3-compatible multipart upload endpoints alongside the existing storage allowlist. HTTPS, redirect blocking, credential separation, and full archive coverage checks remain enforced. Unknown storage errors show only the hostname, never the signed URL.
 - **English first:** English is now the default for fresh workspaces, native dialogs, and the repository README. Russian is still available. Saved preferences and author-written documents are not overwritten.
 - **Project deletion:** visible trash buttons on project cards and a Delete project action inside the editor, with confirmation. Deleting an open project returns to the library. Exported ZIPs, history, and published packages are unaffected.
-- **Interface:** language switches now update page titles correctly; validation actions open the relevant editor section; progress uses the actual check count. Autosave no longer shows an older operation's “saved” state while newer changes are pending.
+- **Interface:** language switches now update page titles correctly; validation actions open the relevant editor section; progress uses the actual check count; nested dialogs no longer sit behind the sidebar on narrow screens. Autosave no longer shows an older operation's “saved” state while newer changes are pending.
 
 ## Authoring improvements
 

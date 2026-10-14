@@ -11,6 +11,7 @@ Bugfix and usability update.
 - Resolve navigation/page titles at render time so switching languages updates every page.
 - Expose project deletion on cards and inside the editor, with confirmation and correct navigation after deleting the active project.
 - Calculate validation progress from the actual check count and make error actions open the relevant editor tab.
+- Render nested dialogs above the sidebar on desktop and mobile, retaining keyboard focus trapping.
 - Prevent stale autosave completions from displaying a misleading saved state.
 
 ### Improved

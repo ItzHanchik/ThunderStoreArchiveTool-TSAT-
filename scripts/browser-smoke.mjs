@@ -105,6 +105,16 @@ try {
     true,
     "No mobile horizontal overflow",
   );
+  assert.equal(
+    await page.getByRole("dialog").evaluate((node) => {
+      const rect = node.getBoundingClientRect();
+      return node.contains(
+        document.elementFromPoint(rect.left + 10, rect.top + 50),
+      );
+    }),
+    true,
+    "Mobile dialog is not obscured by the sidebar stacking context",
+  );
   await page.screenshot({
     path: "test-results/browser-mobile.png",
     fullPage: true,
