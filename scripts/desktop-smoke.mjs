@@ -1,3 +1,6 @@
+process.on('uncaughtException', reportFailure);
+process.on('unhandledRejection', reportFailure);
+function reportFailure(error) { console.error('::error::' + String(error?.stack ?? error).replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A')); process.exit(1); }
 import { _electron as electron } from 'playwright';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
@@ -22,7 +25,7 @@ try {
   await page.getByRole('button', { name: 'Новый проект', exact: true }).click();
   await page.getByPlaceholder('My_Awesome_Mod').fill('Smoke_Test');
   await page.getByRole('button', { name: 'Создать проект', exact: true }).click();
-  await page.getByRole('heading', { name: 'Smoke_Test', exact: true }).waitFor();
+  await page.getByRole('heading', { name: 'Smoke_Test', exact: true, level: 1 }).waitFor();
   await page.getByRole('button', { name: 'Файлы', exact: true }).click();
   await page.locator('input[type=file]:not([webkitdirectory])').setInputFiles({ name: 'test.dll', mimeType: 'application/octet-stream', buffer: Buffer.from('TSAT test payload') });
   await page.getByText('test.dll', { exact: true }).waitFor();
