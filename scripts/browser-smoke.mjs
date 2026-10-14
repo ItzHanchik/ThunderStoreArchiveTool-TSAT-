@@ -142,6 +142,15 @@ try {
   console.log(
     "PASS: English default, RU/EN switching, responsive icon/document dialogs, no renderer exceptions.",
   );
+} catch (error) {
+  console.error(
+    "::error::" +
+      String(error?.stack ?? error)
+        .replaceAll("%", "%25")
+        .replaceAll("\r", "%0D")
+        .replaceAll("\n", "%0A"),
+  );
+  throw error;
 } finally {
   await browser?.close();
   server?.kill();
