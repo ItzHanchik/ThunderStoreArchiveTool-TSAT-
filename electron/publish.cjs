@@ -24,12 +24,24 @@ function allowedUpload(url) {
       !u.username &&
       !u.password &&
       (!u.port || u.port === "443") &&
-      [".amazonaws.com", ".r2.cloudflarestorage.com", ".thunderstore.io"].some(
+      // Thunderstore can return presigned URLs for S3-compatible storage,
+      // including Backblaze B2. Never accept arbitrary hosts or redirects.
+      ([".amazonaws.com", ".r2.cloudflarestorage.com", ".thunderstore.io"].some(
         (domain) => u.hostname.endsWith(domain),
-      )
+      ) ||
+        /^(?:[a-z0-9][a-z0-9.-]*\.)?s3\.[a-z0-9-]+\.backblazeb2\.com$/.test(
+          u.hostname,
+        ))
     );
   } catch {
     return false;
+  }
+}
+function safeUploadHost(value) {
+  try {
+    return new URL(value).hostname.slice(0, 253);
+  } catch {
+    return "(invalid URL)";
   }
 }
 async function publishPackage(bytes, metadata, token, fetcher = fetch) {
@@ -70,9 +82,20 @@ async function publishPackage(bytes, metadata, token, fetcher = fetch) {
     )
       throw new Error(t("Сервер не предоставил части загрузки."));
     let covered = 0;
-    const plans = [...init.upload_urls].sort((a, b) => a.offset - b.offset);
+    const plans = [...init.upload_urls].sort(
+      (a, b) => (a?.offset ?? 0) - (b?.offset ?? 0),
+    );
     const partNumbers = new Set();
     for (const p of plans) {
+      if (!p || typeof p !== "object")
+        throw new Error(t("Неожиданный ответ сервера загрузки."));
+      if (!allowedUpload(p.url))
+        throw new Error(
+          t(
+            "Хранилище загрузки не поддерживается: {0}. Экспортируйте ZIP для сайта и сообщите об этом адресе в TSAT.",
+            safeUploadHost(p.url),
+          ),
+        );
       if (
         !Number.isSafeInteger(p.offset) ||
         !Number.isSafeInteger(p.length) ||
@@ -82,7 +105,7 @@ async function publishPackage(bytes, metadata, token, fetcher = fetch) {
         !Number.isInteger(p.part_number) ||
         p.part_number < 1 ||
         partNumbers.has(p.part_number) ||
-        !allowedUpload(p.url)
+        p.part_number > plans.length
       )
         throw new Error(
           t(
@@ -100,6 +123,7 @@ async function publishPackage(bytes, metadata, token, fetcher = fetch) {
       const r = await fetcher(p.url, {
         method: "PUT",
         headers: {
+          "Content-Length": String(chunk.length),
           "Content-MD5": createHash("md5").update(chunk).digest("base64"),
         },
         body: chunk,

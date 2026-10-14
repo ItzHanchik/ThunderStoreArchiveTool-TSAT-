@@ -3,7 +3,6 @@ on:
   workflow_dispatch:
   push:
     tags: ["v*"]
-    branches: ["arena/d73b8dfa-thunderstorearchivetool-tsat"]
 permissions:
   contents: write
 jobs:

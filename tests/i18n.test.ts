@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
 import { setLanguage, t, dateLocale } from "../src/lib/i18n";
 import { games, newProject } from "../src/lib/model";
@@ -67,5 +69,41 @@ describe("package-facing English templates", () => {
   it("supports current versions and readable project names", () => {
     expect(modChangelog("2.3.4")).toContain("## 2.3.4");
     expect(modReadme("My_Mod", "BONEWORKS")).toMatch(/^# My Mod/);
+  });
+});
+
+describe("translation coverage regressions", () => {
+  it("translates all question/slider labels and literal application messages", () => {
+    const files = [
+      "src/App.tsx",
+      "src/Editor.tsx",
+      "src/DocumentWizard.tsx",
+      "src/IconStudio.tsx",
+      "electron/publish.cjs",
+    ];
+    for (const file of files) {
+      const source = ts.createSourceFile(
+        file,
+        fs.readFileSync(file, "utf8"),
+        ts.ScriptTarget.Latest,
+        true,
+      );
+      function visit(node: ts.Node) {
+        if (ts.isStringLiteral(node) && /[А-Яа-яЁё]/.test(node.text)) {
+          const isMessage =
+            ts.isCallExpression(node.parent) &&
+            node.parent.expression.getText(source) === "t";
+          const isWizardLabel =
+            file === "src/DocumentWizard.tsx" || file === "src/IconStudio.tsx";
+          if (isMessage || isWizardLabel)
+            expect(
+              (english as Record<string, string>)[node.text],
+              `${file}: ${node.text}`,
+            ).toBeTruthy();
+        }
+        ts.forEachChild(node, visit);
+      }
+      visit(source);
+    }
   });
 });

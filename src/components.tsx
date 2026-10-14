@@ -24,7 +24,7 @@ export function Modal({
     const focusable = () =>
       Array.from(
         element?.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), input:not([disabled]), select, textarea, [tabindex="0"]',
+          'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex="0"]',
         ) ?? [],
       ).filter((e) => e.offsetParent !== null);
     (

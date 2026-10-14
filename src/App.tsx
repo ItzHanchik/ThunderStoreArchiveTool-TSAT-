@@ -1,6 +1,7 @@
 import { t, setLanguage, dateLocale } from "./lib/i18n";
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
@@ -67,11 +68,11 @@ import { Modal } from "./components";
 type Page = "online" | "projects" | "games" | "history" | "guide";
 type Dialog = "new" | "appearance" | "account" | null;
 const pageTitles: Record<Page, string> = {
-  online: t("Каталог Thunderstore"),
-  projects: t("Мои проекты"),
-  games: t("Игры и сообщества"),
-  history: t("История сборок"),
-  guide: t("Как это работает"),
+  online: "Каталог Thunderstore",
+  projects: "Мои проекты",
+  games: "Игры и сообщества",
+  history: "История сборок",
+  guide: "Как это работает",
 };
 export default function App() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -94,6 +95,7 @@ export default function App() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const search = useRef<HTMLInputElement>(null);
   const saveQueue = useRef(Promise.resolve());
+  const saveRevision = useRef(0);
   useEffect(() => {
     document.documentElement.lang = preferences.language;
     void window.tsat?.setLanguage(preferences.language).catch(() => {});
@@ -134,15 +136,20 @@ export default function App() {
       cancelled = true;
     };
   }, []);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!loaded) return;
+    const revision = ++saveRevision.current;
     setSaveState(t("Сохранение…"));
     {
       saveQueue.current = saveQueue.current
         .catch(() => {})
         .then(() => saveWorkspace({ projects, history, preferences }))
-        .then(() => setSaveState(t("Сохранено на устройстве")))
+        .then(() => {
+          if (revision === saveRevision.current)
+            setSaveState(t("Сохранено на устройстве"));
+        })
         .catch(() => {
+          if (revision !== saveRevision.current) return;
           setSaveState(t("Ошибка сохранения"));
           notify(
             t(
@@ -349,7 +356,7 @@ export default function App() {
           </button>
           <div className="sidebar-version">
             <span>
-              <span className="status-dot" /> TSAT v0.1.0
+              <span className="status-dot" /> TSAT v0.1.1
             </span>
             <span>EARLY ACCESS</span>
           </div>
@@ -436,7 +443,9 @@ export default function App() {
             </div>
           ) : active ? (
             <Editor
+              key={active.id}
               project={active}
+              onDelete={() => setDeleteId(active.id)}
               onChange={update}
               onBack={() => setActiveId(null)}
               onBuild={() => build(active)}
@@ -893,7 +902,9 @@ export default function App() {
               className="button danger"
               onClick={() => {
                 setProjects((ps) => ps.filter((p) => p.id !== deleteId));
+                setActiveId((id) => (id === deleteId ? null : id));
                 setDeleteId(null);
+                notify(t("Проект удалён. Экспортированные архивы сохранены."));
               }}
             >
               {t("Удалить проект")}
@@ -978,6 +989,18 @@ function ProjectCard({
 }) {
   const g = gameInfo(p.game);
   const [menu, setMenu] = useState(false);
+  const [iconUrl, setIconUrl] = useState("");
+  useEffect(() => {
+    if (!p.icon) {
+      setIconUrl("");
+      return;
+    }
+    const url = URL.createObjectURL(
+      new Blob([new Uint8Array(p.icon)], { type: "image/png" }),
+    );
+    setIconUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [p.icon]);
   return (
     <article className="project-card">
       <button
@@ -992,7 +1015,7 @@ function ProjectCard({
           <span /> {p.template ? t("Шаблон") : t("Проект")}
         </span>
         <span className="art-monogram" style={{ background: g.color }}>
-          {p.manifest.name[0]}
+          {iconUrl ? <img src={iconUrl} alt="" /> : p.manifest.name[0]}
         </span>
       </button>
       <div className="project-body">
@@ -1064,6 +1087,14 @@ function ProjectCard({
                   }),
                 )}
           </span>
+          <button
+            className="delete-project-button"
+            onClick={onDelete}
+            aria-label={t("Удалить {0}", p.manifest.name)}
+            title={t("Удалить проект")}
+          >
+            <Trash2 size={16} />
+          </button>
           <button onClick={onOpen}>
             {t("Открыть проект")}
             <ArrowRight size={14} />
