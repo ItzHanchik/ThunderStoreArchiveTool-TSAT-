@@ -2,6 +2,7 @@ import { chromium } from "playwright";
 import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import assert from "node:assert/strict";
+import { stripVTControlCharacters } from "node:util";
 import { featureSmoke } from "./ui-smoke.mjs";
 
 let server;
@@ -21,13 +22,18 @@ try {
       ],
       { stdio: ["ignore", "pipe", "pipe"] },
     );
+    let startupOutput = "";
     await new Promise((resolve, reject) => {
       const timeout = setTimeout(
-        () => reject(new Error("Preview startup timed out")),
+        () => reject(new Error(`Preview startup timed out: ${startupOutput}`)),
         30000,
       );
       server.stdout.on("data", (data) => {
-        if (data.toString().includes("Local:")) {
+        process.stdout.write(data);
+        startupOutput = (
+          startupOutput + stripVTControlCharacters(data.toString())
+        ).slice(-16384);
+        if (startupOutput.includes("Local:")) {
           clearTimeout(timeout);
           resolve();
         }
