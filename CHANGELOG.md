@@ -12,4 +12,7 @@ First early-access implementation.
 - Experimental multipart API publication with explicit native confirmation.
 - Windows NSIS/portable targets and CI workflows; binaries not yet Windows-tested.
 - Read-only online catalog, communities, token verification, metadata-only drafts.
-- 53 automated packaging and mocked API tests.
+- RU/EN UI and native dialog localization with persisted preferences.
+- BONEWORKS community preset, separate from BONELAB.
+- Detailed English-only README/CHANGELOG templates and confirmed template replacement.
+- 61 automated packaging and mocked API tests.

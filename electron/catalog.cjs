@@ -1,3 +1,4 @@
+const { t } = require("../shared/i18n.cjs");
 const BASE = "https://thunderstore.io/api/experimental/";
 const slug = (value) =>
   typeof value === "string" &&
@@ -13,10 +14,10 @@ async function getJson(endpoint, token, fetcher = fetch) {
   });
   if (!response.ok)
     throw new Error(
-      `Thunderstore: HTTP ${response.status}. ${[401, 403].includes(response.status) ? "Проверьте токен и права команды." : "Попробуйте позже или откройте официальный сайт."}`,
+      `Thunderstore: HTTP ${response.status}. ${[401, 403].includes(response.status) ? t("Проверьте токен и права команды.") : t("Попробуйте позже или откройте официальный сайт.")}`,
     );
   const reader = response.body?.getReader();
-  if (!reader) throw new Error("Thunderstore вернул пустой ответ.");
+  if (!reader) throw new Error(t("Thunderstore вернул пустой ответ."));
   let size = 0;
   const chunks = [];
   try {
@@ -25,7 +26,7 @@ async function getJson(endpoint, token, fetcher = fetch) {
       if (done) break;
       size += value.length;
       if (size > 4 * 1024 * 1024)
-        throw new Error("Ответ Thunderstore превышает безопасный лимит.");
+        throw new Error(t("Ответ Thunderstore превышает безопасный лимит."));
       chunks.push(Buffer.from(value));
     }
   } catch (e) {
@@ -35,7 +36,7 @@ async function getJson(endpoint, token, fetcher = fetch) {
   try {
     return JSON.parse(Buffer.concat(chunks).toString("utf8"));
   } catch {
-    throw new Error("Неподдерживаемый ответ Thunderstore.");
+    throw new Error(t("Неподдерживаемый ответ Thunderstore."));
   }
 }
 async function listAll(endpoint, fetcher) {
@@ -45,7 +46,7 @@ async function listAll(endpoint, fetcher) {
     const data = await getJson(next, undefined, fetcher);
     if (!Array.isArray(data.results))
       throw new Error(
-        "Формат каталога изменился. Используйте официальный сайт.",
+        t("Формат каталога изменился. Используйте официальный сайт."),
       );
     results.push(...data.results);
     if (!data.next) return results;
@@ -57,14 +58,14 @@ async function listAll(endpoint, fetcher) {
       url.username ||
       url.password
     )
-      throw new Error("Небезопасная пагинация каталога.");
+      throw new Error(t("Небезопасная пагинация каталога."));
     next = endpoint + url.search;
   }
-  throw new Error("Каталог слишком большой. Используйте официальный сайт.");
+  throw new Error(t("Каталог слишком большой. Используйте официальный сайт."));
 }
 async function catalog(operation, params = {}, fetcher = fetch) {
   if (!params || typeof params !== "object")
-    throw new Error("Неверные параметры каталога.");
+    throw new Error(t("Неверные параметры каталога."));
   if (operation === "communities") {
     const result = await listAll("community/", fetcher);
     return result
@@ -100,7 +101,9 @@ async function catalog(operation, params = {}, fetcher = fetch) {
       fetcher,
     );
     if (!Array.isArray(data.packages))
-      throw new Error("Формат поиска изменился. Используйте официальный сайт.");
+      throw new Error(
+        t("Формат поиска изменился. Используйте официальный сайт."),
+      );
     return {
       more: data.has_more_pages === true,
       packages: data.packages
@@ -125,7 +128,7 @@ async function catalog(operation, params = {}, fetcher = fetch) {
       typeof p.latest.version_number !== "string" ||
       !/^\d+\.\d+\.\d+$/.test(p.latest.version_number)
     )
-      throw new Error("Пакет не содержит подходящей версии.");
+      throw new Error(t("Пакет не содержит подходящей версии."));
     return {
       namespace: params.namespace,
       name: params.name,
@@ -140,7 +143,7 @@ async function catalog(operation, params = {}, fetcher = fetch) {
       deprecated: p.is_deprecated === true,
     };
   }
-  throw new Error("Неверный запрос каталога.");
+  throw new Error(t("Неверный запрос каталога."));
 }
 async function verifyToken(token, fetcher = fetch) {
   const profile = await getJson("current-user/", token, fetcher);
@@ -150,7 +153,9 @@ async function verifyToken(token, fetcher = fetch) {
     !Array.isArray(profile.teams)
   )
     throw new Error(
-      "Токен не подтвердил авторизацию. Создайте service account команды заново.",
+      t(
+        "Токен не подтвердил авторизацию. Создайте service account команды заново.",
+      ),
     );
   return { username: profile.username, teams: profile.teams.filter(name) };
 }

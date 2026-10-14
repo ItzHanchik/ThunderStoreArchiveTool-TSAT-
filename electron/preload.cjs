@@ -1,5 +1,6 @@
 const { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("tsat", {
+  setLanguage: (language) => ipcRenderer.invoke("locale:set", language),
   saveArchive: (bytes, filename) =>
     ipcRenderer.invoke("archive:save", bytes, filename),
   openExternal: (url) => ipcRenderer.invoke("external:open", url),

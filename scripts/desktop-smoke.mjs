@@ -45,13 +45,11 @@ try {
     .getByRole("heading", { name: "Smoke_Test", exact: true, level: 1 })
     .waitFor();
   await page.getByRole("button", { name: "Файлы", exact: true }).click();
-  await page
-    .locator("input[type=file]:not([webkitdirectory])")
-    .setInputFiles({
-      name: "test.dll",
-      mimeType: "application/octet-stream",
-      buffer: Buffer.from("TSAT test payload"),
-    });
+  await page.locator("input[type=file]:not([webkitdirectory])").setInputFiles({
+    name: "test.dll",
+    mimeType: "application/octet-stream",
+    buffer: Buffer.from("TSAT test payload"),
+  });
   await page.getByText("test.dll", { exact: true }).waitFor();
   const destination = path.join(temp, "Smoke_Test-1.0.0.zip");
   await app.evaluate(({ dialog }, dest) => {
@@ -96,6 +94,44 @@ try {
   assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
   assert.equal(await page.locator(".weather.snow").count(), 1);
   assert.equal(await page.locator(".project-card").count(), 4);
+  assert.ok(
+    !/[А-Яа-яЁё]/.test(strFromU8(zip["README.md"])),
+    "New package README is always English",
+  );
+  assert.ok(strFromU8(zip["README.md"]).includes("## Compatibility"));
+  await page
+    .getByRole("button", { name: "Русский / English", exact: true })
+    .click();
+  await page.getByRole("heading", { name: "My projects." }).waitFor();
+  assert.equal(await page.locator("html").getAttribute("lang"), "en");
+  await page
+    .getByRole("button", { name: "Games & communities", exact: true })
+    .click();
+  await page.getByRole("heading", { name: "BONEWORKS", exact: true }).waitFor();
+  await page
+    .getByRole("button", { name: "Personalization", exact: true })
+    .click();
+  await page.getByText("Interface language", { exact: true }).waitFor();
+  await page.getByRole("button", { name: "Just right", exact: true }).click();
+  await page.getByText("Saved on this device", { exact: true }).waitFor();
+  await page.reload();
+  await page.getByRole("heading", { name: "My projects." }).waitFor();
+  assert.equal(await page.locator("html").getAttribute("lang"), "en");
+  // Interface translation must never rewrite a user's package contents.
+  await page
+    .getByRole("button", { name: "Open Smoke_Test", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Description", exact: true }).click();
+  assert.equal(
+    await page
+      .getByRole("textbox", { name: "README Markdown", exact: true })
+      .inputValue(),
+    strFromU8(zip["README.md"]),
+  );
+  await page
+    .getByRole("button", { name: "Русский / English", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Все проекты", exact: true }).click();
   assert.deepEqual(errors, []);
   await fs.mkdir("test-results", { recursive: true });
   await page.screenshot({

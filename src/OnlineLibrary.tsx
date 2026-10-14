@@ -1,3 +1,4 @@
+import { t, dateLocale } from "./lib/i18n";
 import { useState } from "react";
 import {
   ArrowLeft,
@@ -61,25 +62,27 @@ export default function OnlineLibrary({ onImport, notify }: Props) {
       <div className="info-strip">
         <ShieldCheck size={20} />
         <span>
-          Живые данные Thunderstore по вашему запросу. Импорт создаёт{" "}
-          <strong>новый локальный черновик метаданных</strong>, не скачивает код
-          и не меняет опубликованный мод.
+          {t("Живые данные Thunderstore по вашему запросу. Импорт создаёт")}{" "}
+          <strong>{t("новый локальный черновик метаданных")}</strong>
+          {t(", не скачивает код и не меняет опубликованный мод.")}
         </span>
       </div>
       {!window.tsat && (
         <div className="desktop-only">
           <Globe size={22} />
           <div>
-            <strong>Онлайн-каталог работает в EXE</strong>
+            <strong>{t("Онлайн-каталог работает в EXE")}</strong>
             <p>
-              Веб-превью не обращается к API и не хранит токены. Для просмотра
-              модов откройте официальный сайт.
+              {t(
+                "Веб-превью не обращается к API и не хранит токены. Для просмотра модов откройте официальный сайт.",
+              )}
             </p>
             <button
               className="text-button"
               onClick={() => openExternal("https://thunderstore.io/")}
             >
-              Перейти в Thunderstore <ExternalLink size={14} />
+              {t("Перейти в Thunderstore")}
+              <ExternalLink size={14} />
             </button>
           </div>
         </div>
@@ -87,8 +90,8 @@ export default function OnlineLibrary({ onImport, notify }: Props) {
       <section className="panel online-panel">
         <div className="section-heading">
           <div>
-            <h2>Один каталог. Много миров.</h2>
-            <p>Найдите пакет по названию или namespace команды.</p>
+            <h2>{t("Один каталог. Много миров.")}</h2>
+            <p>{t("Найдите пакет по названию или namespace команды.")}</p>
           </div>
           <button
             className="button"
@@ -99,7 +102,7 @@ export default function OnlineLibrary({ onImport, notify }: Props) {
               try {
                 const list = await window.tsat!.catalog("communities");
                 setCommunities(list);
-                notify(`Загружено сообществ: ${list.length}`);
+                notify(t("Загружено сообществ: {0}", list.length));
               } catch (e) {
                 setError((e as Error).message);
               } finally {
@@ -112,7 +115,7 @@ export default function OnlineLibrary({ onImport, notify }: Props) {
             ) : (
               <RefreshCw size={14} />
             )}
-            Обновить игры
+            {t("Обновить игры")}
           </button>
         </div>
         <form
@@ -123,7 +126,7 @@ export default function OnlineLibrary({ onImport, notify }: Props) {
           }}
         >
           <label className="field">
-            Сообщество
+            {t("Сообщество")}
             <select
               disabled={busy}
               value={community}
@@ -134,12 +137,12 @@ export default function OnlineLibrary({ onImport, notify }: Props) {
                   {g.name}
                 </option>
               ))}
-              <option value="custom">Другое…</option>
+              <option value="custom">{t("Другое…")}</option>
             </select>
           </label>
           {community === "custom" && (
             <label className="field">
-              Идентификатор
+              {t("Идентификатор")}
               <input
                 required
                 pattern="[a-z0-9]+(-[a-z0-9]+)*"
@@ -149,7 +152,7 @@ export default function OnlineLibrary({ onImport, notify }: Props) {
             </label>
           )}
           <label className="field grow">
-            Название или команда
+            {t("Название или команда")}
             <input
               value={query}
               maxLength={128}
@@ -166,7 +169,7 @@ export default function OnlineLibrary({ onImport, notify }: Props) {
             ) : (
               <Search size={16} />
             )}
-            Найти
+            {t("Найти")}
           </button>
         </form>
         {window.tsat && (
@@ -179,7 +182,7 @@ export default function OnlineLibrary({ onImport, notify }: Props) {
               try {
                 const user = await window.tsat!.verifyToken();
                 setVerified(
-                  `${user.username} · ${user.teams.join(", ") || "нет активных команд"}`,
+                  `${user.username} · ${user.teams.join(", ") || t("нет активных команд")}`,
                 );
                 setQuery(user.teams[0] ?? "");
               } catch (e) {
@@ -190,14 +193,15 @@ export default function OnlineLibrary({ onImport, notify }: Props) {
             }}
           >
             <ShieldCheck size={15} />
-            Проверить сохранённый токен и выбрать мою команду
+            {t("Проверить сохранённый токен и выбрать мою команду")}
           </button>
         )}
         {verified && (
           <p className="saved-token">
             <CheckCircle2 size={15} />
-            Авторизация подтверждена: {verified}. Права публикации проверяются
-            отдельно.
+            {t("Авторизация подтверждена:")}
+            {verified}
+            {t(". Права публикации проверяются отдельно.")}
           </p>
         )}
         {error && (
@@ -220,8 +224,9 @@ export default function OnlineLibrary({ onImport, notify }: Props) {
               <h3>{p.name}</h3>
               <p>{p.description}</p>
               <span className="muted">
-                <Download size={12} /> {p.downloads.toLocaleString("ru-RU")}{" "}
-                загрузок{p.deprecated ? " · Устарел" : ""}
+                <Download size={12} />{" "}
+                {p.downloads.toLocaleString(dateLocale())} {t("загрузок")}
+                {p.deprecated ? t(" · Устарел") : ""}
               </span>
             </div>
             <div className="online-package-actions">
@@ -233,7 +238,8 @@ export default function OnlineLibrary({ onImport, notify }: Props) {
                   )
                 }
               >
-                На сайте <ExternalLink size={13} />
+                {t("На сайте")}
+                <ExternalLink size={13} />
               </button>
               <button
                 className="text-button"
@@ -257,7 +263,7 @@ export default function OnlineLibrary({ onImport, notify }: Props) {
                 }}
               >
                 <Plus size={14} />
-                Черновик из метаданных
+                {t("Черновик из метаданных")}
               </button>
             </div>
           </article>
@@ -271,17 +277,19 @@ export default function OnlineLibrary({ onImport, notify }: Props) {
             onClick={() => load(page - 1, true)}
           >
             <ArrowLeft size={14} />
-            Назад
+            {t("Назад")}
           </button>
           <span>
-            Страница {page} · {last.community}
+            {t("Страница")}
+            {page} · {last.community}
           </span>
           <button
             className="button"
             disabled={!more || busy}
             onClick={() => load(page + 1, true)}
           >
-            Далее <ArrowRight size={14} />
+            {t("Далее")}
+            <ArrowRight size={14} />
           </button>
         </div>
       )}
@@ -290,13 +298,15 @@ export default function OnlineLibrary({ onImport, notify }: Props) {
           <Globe size={38} />
           <h3>
             {searched
-              ? "Ничего не найдено"
-              : "Ваши моды — часть большого сообщества"}
+              ? t("Ничего не найдено")
+              : t("Ваши моды — часть большого сообщества")}
           </h3>
           <p>
             {searched
-              ? "Измените запрос или сообщество."
-              : "Выберите игру и запустите поиск. Запросы выполняются только по нажатию."}
+              ? t("Измените запрос или сообщество.")
+              : t(
+                  "Выберите игру и запустите поиск. Запросы выполняются только по нажатию.",
+                )}
           </p>
         </div>
       )}

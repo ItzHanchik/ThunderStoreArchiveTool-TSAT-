@@ -1,3 +1,4 @@
+const { t, setLanguage } = require("../shared/i18n.cjs");
 const {
   app,
   BrowserWindow,
@@ -37,7 +38,7 @@ function bytesFrom(value) {
     value[0] !== 80 ||
     value[1] !== 75
   )
-    throw new Error("Некорректный ZIP или превышен лимит 200 МБ.");
+    throw new Error(t("Некорректный ZIP или превышен лимит 200 МБ."));
   return Buffer.from(value);
 }
 function register(channel, handler) {
@@ -47,20 +48,24 @@ function register(channel, handler) {
       event.sender !== window.webContents ||
       event.senderFrame !== window.webContents.mainFrame
     )
-      throw new Error("Недоверенный источник.");
+      throw new Error(t("Недоверенный источник."));
     return handler(...args);
   });
 }
+register("locale:set", (language) => {
+  if (!["ru", "en"].includes(language)) throw new Error("Invalid language");
+  setLanguage(language);
+});
 register("external:open", async (value) => {
   if (typeof value !== "string" || value.length > 4096)
-    throw new Error("Некорректная ссылка.");
+    throw new Error(t("Некорректная ссылка."));
   const url = new URL(value);
   if (
     !["https:", "http:"].includes(url.protocol) ||
     url.username ||
     url.password
   )
-    throw new Error("Можно открывать только веб-ссылки.");
+    throw new Error(t("Можно открывать только веб-ссылки."));
   await shell.openExternal(url.href);
 });
 register("archive:save", async (value, filename) => {
@@ -69,9 +74,9 @@ register("archive:save", async (value, filename) => {
     typeof filename !== "string" ||
     !/^[A-Za-z0-9_]{1,128}-\d+\.\d+\.\d+\.zip$/.test(filename)
   )
-    throw new Error("Некорректное имя архива.");
+    throw new Error(t("Некорректное имя архива."));
   const result = await dialog.showSaveDialog(window, {
-    title: "Сохранить архив мода",
+    title: t("Сохранить архив мода"),
     defaultPath: filename,
     filters: [{ name: "ZIP archive", extensions: ["zip"] }],
   });
@@ -88,9 +93,9 @@ register("token:status", async () => ({
 }));
 register("token:save", async (value) => {
   if (!encryptionAvailable())
-    throw new Error("Системное шифрование недоступно. Токен не сохранён.");
+    throw new Error(t("Системное шифрование недоступно. Токен не сохранён."));
   if (typeof value !== "string" || !/^[\x21-\x7e]{16,4096}$/.test(value.trim()))
-    throw new Error("Проверьте формат токена.");
+    throw new Error(t("Проверьте формат токена."));
   const file = tokenPath();
   await fs.mkdir(path.dirname(file), { recursive: true });
   await fs.writeFile(file + ".tmp", safeStorage.encryptString(value.trim()), {
@@ -104,41 +109,49 @@ register("token:delete", async () => {
 register("catalog:read", (operation, params) => catalog(operation, params));
 register("token:verify", async () => {
   if (!encryptionAvailable())
-    throw new Error("Защищённое хранилище недоступно.");
+    throw new Error(t("Защищённое хранилище недоступно."));
   let token;
   try {
     token = safeStorage.decryptString(await fs.readFile(tokenPath()));
   } catch {
-    throw new Error("Сохраните токен команды заново.");
+    throw new Error(t("Сохраните токен команды заново."));
   }
   return verifyToken(token);
 });
 register("package:publish", async (value, metadata) => {
-  if (publishing) throw new Error("Другая публикация уже выполняется.");
+  if (publishing) throw new Error(t("Другая публикация уже выполняется."));
   const bytes = bytesFrom(value);
   validateMetadata(metadata);
   if (!encryptionAvailable())
-    throw new Error("Защищённое хранилище недоступно.");
+    throw new Error(t("Защищённое хранилище недоступно."));
   publishing = true;
   try {
     const confirmation = await dialog.showMessageBox(window, {
       type: "question",
-      title: "Опубликовать в Thunderstore?",
-      message: `${metadata.filename}\nКоманда: ${metadata.team}\nСообщество: ${metadata.community}`,
-      detail:
+      title: t("Опубликовать в Thunderstore?"),
+      message: t(
+        "{0}\nКоманда: {1}\nСообщество: {2}",
+        metadata.filename,
+        metadata.team,
+        metadata.community,
+      ),
+      detail: t(
         "Архив будет отправлен в Thunderstore. Это не локальная сборка. Убедитесь, что файлы не содержат секретов.",
-      buttons: ["Отмена", "Опубликовать"],
+      ),
+      buttons: [t("Отмена"), t("Опубликовать")],
       defaultId: 0,
       cancelId: 0,
       noLink: true,
     });
-    if (confirmation.response !== 1) throw new Error("Публикация отменена.");
+    if (confirmation.response !== 1) throw new Error(t("Публикация отменена."));
     let token;
     try {
       token = safeStorage.decryptString(await fs.readFile(tokenPath()));
     } catch {
       throw new Error(
-        "Подключите токен заново: он отсутствует или создан другим пользователем Windows.",
+        t(
+          "Подключите токен заново: он отсутствует или создан другим пользователем Windows.",
+        ),
       );
     }
     return await publishPackage(bytes, metadata, token);
@@ -180,8 +193,9 @@ app.whenReady().then(() => {
         event.preventDefault();
         dialog.showMessageBox(window, {
           type: "info",
-          message:
+          message: t(
             "Дождитесь завершения публикации, чтобы не потерять её статус.",
+          ),
         });
       }
     });

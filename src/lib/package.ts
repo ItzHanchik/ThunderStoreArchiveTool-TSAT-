@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import { zip, strToU8, type Zippable } from "fflate";
 import type { Project, Asset } from "./model";
 export interface Check {
@@ -91,72 +92,76 @@ export function validate(p: Project): Check[] {
   return [
     c(
       "name",
-      "Название пакета",
+      t("Название пакета"),
       /^[a-zA-Z0-9_]{1,128}$/.test(m.name),
-      "От 1 до 128 символов: латиница, цифры и подчёркивания.",
+      t("От 1 до 128 символов: латиница, цифры и подчёркивания."),
     ),
     c(
       "version",
-      "Версия пакета",
+      t("Версия пакета"),
       /^\d+\.\d+\.\d+$/.test(m.version_number) &&
         m.version_number.split(".").every((n) => Number(n) <= 2147483647),
-      "Три числа через точку, например 1.0.0. Без beta и v.",
+      t("Три числа через точку, например 1.0.0. Без beta и v."),
     ),
     c(
       "description",
-      "Описание",
+      t("Описание"),
       m.description.length <= 250,
-      `${m.description.length} / 250 символов.`,
+      t("{0} / 250 символов.", m.description.length),
     ),
     c(
       "website",
-      "Ссылка на проект",
+      t("Ссылка на проект"),
       website,
-      "Необязательно. Поддерживаются http, https, mailto и ipfs.",
+      t("Необязательно. Поддерживаются http, https, mailto и ipfs."),
     ),
     c(
       "readme",
       "README.md",
       !!p.readme.trim(),
-      "Непустая инструкция в корне архива, в UTF-8.",
+      t("Непустая инструкция в корне архива, в UTF-8."),
     ),
     c(
       "icon",
-      "Иконка 256 × 256",
+      t("Иконка 256 × 256"),
       isPng256(p.icon),
-      "Нужен PNG размером ровно 256 × 256 пикселей.",
+      t("Нужен PNG размером ровно 256 × 256 пикселей."),
     ),
     c(
       "dependencies",
-      "Зависимости",
+      t("Зависимости"),
       depValid,
-      "Формат Author-Package-1.0.0, без повторов и зависимости от себя. Наличие проверит сервер.",
+      t(
+        "Формат Author-Package-1.0.0, без повторов и зависимости от себя. Наличие проверит сервер.",
+      ),
     ),
     c(
       "paths",
-      "Структура архива",
+      t("Структура архива"),
       filesValid,
-      "Без небезопасных путей, дубликатов и служебных файлов.",
+      t("Без небезопасных путей, дубликатов и служебных файлов."),
     ),
     c(
       "size",
-      "Размер проекта",
+      t("Размер проекта"),
       total <= MAX_BYTES && p.files.length <= 2000,
-      "Локальный лимит TSAT: 200 МБ и 2000 файлов.",
+      t("Локальный лимит TSAT: 200 МБ и 2000 файлов."),
     ),
     {
       id: "payload",
-      title: "Содержимое мода",
+      title: t("Содержимое мода"),
       status: p.files.length ? "ok" : "warning",
-      detail:
+      detail: t(
         "Без файлов мода получится пакет метаданных. Для modpack это нормально.",
+      ),
     },
     {
       id: "server",
-      title: "Проверка Thunderstore",
+      title: t("Проверка Thunderstore"),
       status: "warning",
-      detail:
+      detail: t(
         "Права команды, уникальность версии, зависимости и правила сообщества проверяются при публикации.",
+      ),
     },
   ];
 }
@@ -187,7 +192,7 @@ export async function buildPackage(p: Project): Promise<Uint8Array> {
 export function mergeAssets(current: Asset[], incoming: Asset[]): Asset[] {
   const map = new Map(current.map((f) => [f.path.toLowerCase(), f]));
   for (const f of incoming) {
-    if (!safePath(f.path)) throw new Error(`Небезопасный путь: ${f.path}`);
+    if (!safePath(f.path)) throw new Error(t("Небезопасный путь: {0}", f.path));
     if (RESERVED.includes(f.path.toLowerCase()) || ignoredPath(f.path))
       continue;
     map.set(f.path.toLowerCase(), f);
@@ -197,6 +202,6 @@ export function mergeAssets(current: Asset[], incoming: Asset[]): Asset[] {
     files.length > 2000 ||
     files.reduce((n, f) => n + f.data.length, 0) > MAX_BYTES
   )
-    throw new Error("Лимит проекта: 200 МБ и 2000 файлов.");
+    throw new Error(t("Лимит проекта: 200 МБ и 2000 файлов."));
   return files;
 }

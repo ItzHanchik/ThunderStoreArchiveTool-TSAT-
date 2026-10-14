@@ -1,3 +1,5 @@
+import { modReadme, modChangelog } from "./lib/templates";
+import { t } from "./lib/i18n";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import Markdown from "react-markdown";
 import {
@@ -96,7 +98,7 @@ export default function Editor({
         files.reduce((n, f) => n + f.size, 0) > MAX_BYTES
       )
         throw new Error(
-          "За один раз можно добавить не более 200 МБ и 2000 файлов.",
+          t("За один раз можно добавить не более 200 МБ и 2000 файлов."),
         );
       const incoming: Asset[] = [];
       const next = { ...p, manifest: { ...p.manifest } };
@@ -105,7 +107,7 @@ export default function Editor({
         const path = folderMode
           ? f.webkitRelativePath.split("/").slice(1).join("/")
           : f.name;
-        if (!safePath(path)) throw new Error(`Небезопасное имя: ${path}`);
+        if (!safePath(path)) throw new Error(t("Небезопасное имя: {0}", path));
         if (ignoredPath(path)) {
           skipped++;
           continue;
@@ -114,21 +116,21 @@ export default function Editor({
         const lower = path.toLowerCase();
         if (lower === "icon.png") {
           if (!isPng256(data))
-            throw new Error("icon.png должен быть PNG 256 × 256.");
+            throw new Error(t("icon.png должен быть PNG 256 × 256."));
           next.icon = data;
         } else if (lower === "readme.md" || lower === "changelog.md") {
           if (data.length > 1024 * 1024)
-            throw new Error("Документ Markdown должен быть меньше 1 МБ.");
+            throw new Error(t("Документ Markdown должен быть меньше 1 МБ."));
           next[lower === "readme.md" ? "readme" : "changelog"] =
             new TextDecoder("utf-8", { fatal: true }).decode(data);
         } else if (lower === "manifest.json") {
           if (data.length > 1024 * 1024)
-            throw new Error("Слишком большой manifest.json.");
+            throw new Error(t("Слишком большой manifest.json."));
           const m: unknown = JSON.parse(
             new TextDecoder("utf-8", { fatal: true }).decode(data),
           );
           if (!m || typeof m !== "object")
-            throw new Error("Неверный формат manifest.json.");
+            throw new Error(t("Неверный формат manifest.json."));
           const value = m as Record<string, unknown>;
           if (
             !["name", "description", "website_url", "version_number"].every(
@@ -138,7 +140,9 @@ export default function Editor({
             !value.dependencies.every((d) => typeof d === "string")
           )
             throw new Error(
-              "Manifest должен содержать name, version_number, website_url, description и массив dependencies.",
+              t(
+                "Manifest должен содержать name, version_number, website_url, description и массив dependencies.",
+              ),
             );
           if (
             Object.keys(value).some(
@@ -153,7 +157,9 @@ export default function Editor({
             )
           )
             throw new Error(
-              "Manifest содержит дополнительные поля (например, installers), которые эта версия TSAT пока не поддерживает. Импорт отменён, чтобы не потерять настройки.",
+              t(
+                "Manifest содержит дополнительные поля (например, installers), которые эта версия TSAT пока не поддерживает. Импорт отменён, чтобы не потерять настройки.",
+              ),
             );
           next.manifest = {
             name: value.name as string,
@@ -167,10 +173,16 @@ export default function Editor({
       next.files = mergeAssets(p.files, incoming);
       onChange(next);
       notify(
-        `Импортировано: ${files.length - skipped}. ${skipped ? `Пропущено служебных файлов: ${skipped}.` : "Структура папок сохранена."}`,
+        t(
+          "Импортировано: {0}. {1}",
+          files.length - skipped,
+          skipped
+            ? t("Пропущено служебных файлов: {0}.", skipped)
+            : t("Структура папок сохранена."),
+        ),
       );
     } catch (e) {
-      notify(`Импорт отменён: ${(e as Error).message}`);
+      notify(t("Импорт отменён: {0}", (e as Error).message));
     } finally {
       setImporting(false);
       if (input.current) input.current.value = "";
@@ -182,10 +194,10 @@ export default function Editor({
     if (!file) return;
     try {
       if (file.size > 4 * 1024 * 1024)
-        throw new Error("Иконка должна быть меньше 4 МБ.");
+        throw new Error(t("Иконка должна быть меньше 4 МБ."));
       const data = new Uint8Array(await file.arrayBuffer());
       if (!isPng256(data))
-        throw new Error("Выберите PNG размером ровно 256 × 256.");
+        throw new Error(t("Выберите PNG размером ровно 256 × 256."));
       const bitmap = await createImageBitmap(file);
       bitmap.close();
       onChange({ ...p, icon: data });
@@ -198,7 +210,7 @@ export default function Editor({
   function addDependency() {
     const value = dep.trim();
     if (!/^[a-zA-Z0-9_]+-[a-zA-Z0-9_]+-\d+\.\d+\.\d+$/.test(value)) {
-      notify("Укажите зависимость в формате Author-Package-1.0.0.");
+      notify(t("Укажите зависимость в формате Author-Package-1.0.0."));
       return;
     }
     const name = value.split("-").slice(0, -1).join("-").toLowerCase();
@@ -208,12 +220,14 @@ export default function Editor({
       )
     ) {
       notify(
-        "Этот пакет уже есть в зависимостях. Сначала удалите прежнюю версию.",
+        t(
+          "Этот пакет уже есть в зависимостях. Сначала удалите прежнюю версию.",
+        ),
       );
       return;
     }
     if (p.manifest.dependencies.length >= 1000) {
-      notify("Достигнут лимит: 1000 зависимостей.");
+      notify(t("Достигнут лимит: 1000 зависимостей."));
       return;
     }
     changeManifest("dependencies", [...p.manifest.dependencies, value]);
@@ -223,24 +237,26 @@ export default function Editor({
     <>
       <button className="back-button" onClick={onBack}>
         <ArrowLeft size={16} />
-        Все проекты
+        {t("Все проекты")}
       </button>
       <div className="editor-heading">
         <div className="editor-project-icon" style={{ background: game.color }}>
           {iconUrl ? (
-            <img src={iconUrl} alt="Иконка мода" />
+            <img src={iconUrl} alt={t("Иконка мода")} />
           ) : (
             <FileArchive size={25} />
           )}
         </div>
         <div>
           <div className="eyebrow">
-            {game.name.toUpperCase()} <span>/</span> РЕДАКТОР ПРОЕКТА
+            {game.name.toUpperCase()} <span>/</span> {t("РЕДАКТОР ПРОЕКТА")}
           </div>
-          <h1>{p.manifest.name || "Новый проект"}</h1>
+          <h1>{p.manifest.name || t("Новый проект")}</h1>
           <p>
             <span className="badge">
-              {p.template ? "Шаблон для знакомства" : "Локальный черновик"}
+              {p.template
+                ? t("Шаблон для знакомства")
+                : t("Локальный черновик")}
             </span>
             <span>v{p.manifest.version_number}</span>
           </p>
@@ -248,7 +264,7 @@ export default function Editor({
         <div className="editor-actions">
           <button className="button" onClick={() => setPublish(true)}>
             <Rocket size={16} />
-            Публикация
+            {t("Публикация")}
           </button>
           <button
             className="button primary"
@@ -256,7 +272,7 @@ export default function Editor({
             onClick={() =>
               errors.length
                 ? (setTab("checks"),
-                  notify("Сначала исправьте ошибки проверки."))
+                  notify(t("Сначала исправьте ошибки проверки.")))
                 : onBuild()
             }
           >
@@ -265,7 +281,7 @@ export default function Editor({
             ) : (
               <Download size={17} />
             )}
-            {building ? "Собираем…" : "Собрать ZIP"}
+            {building ? t("Собираем…") : t("Собрать ZIP")}
           </button>
         </div>
       </div>
@@ -273,8 +289,9 @@ export default function Editor({
         <div className="template-notice">
           <SparkIcon />
           <span>
-            Это стартовый шаблон, а не готовый мод. Добавьте свои файлы и
-            описание — сделайте его вашим.
+            {t(
+              "Это стартовый шаблон, а не готовый мод. Добавьте свои файлы и описание — сделайте его вашим.",
+            )}
           </span>
         </div>
       )}
@@ -284,10 +301,10 @@ export default function Editor({
             {(
               [
                 ["manifest", FileCode2, "Manifest"],
-                ["files", FolderOpen, "Файлы"],
-                ["readme", FileText, "Описание"],
-                ["dependencies", Link2, "Зависимости"],
-                ["checks", ShieldCheck, "Проверка"],
+                ["files", FolderOpen, t("Файлы")],
+                ["readme", FileText, t("Описание")],
+                ["dependencies", Link2, t("Зависимости")],
+                ["checks", ShieldCheck, t("Проверка")],
               ] as const
             ).map(([id, Icon, title]) => (
               <button
@@ -308,24 +325,24 @@ export default function Editor({
               <>
                 <div className="section-heading">
                   <div>
-                    <h2>Начнём с главного</h2>
-                    <p>Так ваш мод увидят в Thunderstore.</p>
+                    <h2>{t("Начнём с главного")}</h2>
+                    <p>{t("Так ваш мод увидят в Thunderstore.")}</p>
                   </div>
                   <span className="code-label">manifest.json</span>
                 </div>
                 <div className="form-row">
                   <label className="field grow">
-                    Название пакета
+                    {t("Название пакета")}
                     <input
                       value={p.manifest.name}
                       maxLength={128}
                       onChange={(e) => changeManifest("name", e.target.value)}
                       placeholder="My_Awesome_Mod"
                     />
-                    <small>Латиница, цифры, подчёркивание.</small>
+                    <small>{t("Латиница, цифры, подчёркивание.")}</small>
                   </label>
                   <label className="field version-field">
-                    Версия
+                    {t("Версия")}
                     <input
                       value={p.manifest.version_number}
                       onChange={(e) =>
@@ -333,29 +350,30 @@ export default function Editor({
                       }
                       placeholder="1.0.0"
                     />
-                    <small>Формат: 1.0.0</small>
+                    <small>{t("Формат: 1.0.0")}</small>
                   </label>
                 </div>
                 <label className="field">
-                  Краткое описание
+                  {t("Краткое описание")}
                   <textarea
                     rows={3}
                     value={p.manifest.description}
                     onChange={(e) =>
                       changeManifest("description", e.target.value)
                     }
-                    placeholder="Что делает ваш мод особенным?"
+                    placeholder={t("Что делает ваш мод особенным?")}
                   />
                   <small
                     className={
                       p.manifest.description.length > 250 ? "error-text" : ""
                     }
                   >
-                    {p.manifest.description.length} / 250 символов
+                    {p.manifest.description.length} {t("/ 250 символов")}
                   </small>
                 </label>
                 <label className="field">
-                  Сайт проекта <span className="optional">необязательно</span>
+                  {t("Сайт проекта")}
+                  <span className="optional">{t("необязательно")}</span>
                   <input
                     value={p.manifest.website_url}
                     onChange={(e) =>
@@ -366,41 +384,47 @@ export default function Editor({
                 </label>
                 <div className="form-row">
                   <label className="field grow">
-                    Команда Thunderstore
+                    {t("Команда Thunderstore")}
                     <input
                       value={p.team}
                       onChange={(e) => onChange({ ...p, team: e.target.value })}
                       placeholder="YourTeam"
                     />
                     <small>
-                      Namespace для публикации. В manifest не записывается.
+                      {t(
+                        "Namespace для публикации. В manifest не записывается.",
+                      )}
                     </small>
                   </label>
                   <label className="field grow">
-                    Сообщество
+                    {t("Сообщество")}
                     <input
                       value={p.game}
                       onChange={(e) => onChange({ ...p, game: e.target.value })}
                       placeholder="valheim"
                     />
-                    <small>Идентификатор из адреса /c/сообщество/.</small>
+                    <small>
+                      {t("Идентификатор из адреса /c/сообщество/.")}
+                    </small>
                   </label>
                 </div>
                 <div className="icon-editor">
                   <div className="icon-preview">
                     {iconUrl ? (
-                      <img src={iconUrl} alt="Иконка пакета" />
+                      <img src={iconUrl} alt={t("Иконка пакета")} />
                     ) : (
                       <FileImage size={28} />
                     )}
                   </div>
                   <div>
-                    <h3>Маленькая иконка. Большое первое впечатление.</h3>
-                    <p>PNG · ровно 256 × 256 пикселей</p>
+                    <h3>
+                      {t("Маленькая иконка. Большое первое впечатление.")}
+                    </h3>
+                    <p>{t("PNG · ровно 256 × 256 пикселей")}</p>
                     <div className="inline-actions">
                       <label className="button small">
                         <ImagePlus size={14} />
-                        Выбрать иконку
+                        {t("Выбрать иконку")}
                         <input
                           type="file"
                           accept="image/png"
@@ -420,11 +444,11 @@ export default function Editor({
                               ),
                             });
                           } catch {
-                            notify("Не удалось создать иконку.");
+                            notify(t("Не удалось создать иконку."));
                           }
                         }}
                       >
-                        Сгенерировать букву
+                        {t("Сгенерировать букву")}
                       </button>
                     </div>
                   </div>
@@ -435,9 +459,11 @@ export default function Editor({
               <>
                 <div className="section-heading">
                   <div>
-                    <h2>Всё на своих местах</h2>
+                    <h2>{t("Всё на своих местах")}</h2>
                     <p>
-                      Сохраняем структуру папки. Ничего не перемещаем без вас.
+                      {t(
+                        "Сохраняем структуру папки. Ничего не перемещаем без вас.",
+                      )}
                     </p>
                   </div>
                   <span className="code-label">
@@ -460,7 +486,9 @@ export default function Editor({
                       )
                     ) {
                       notify(
-                        "Для папки используйте кнопку «Выбрать папку» — так сохранится вложенная структура.",
+                        t(
+                          "Для папки используйте кнопку «Выбрать папку» — так сохранится вложенная структура.",
+                        ),
                       );
                       return;
                     }
@@ -476,17 +504,17 @@ export default function Editor({
                   </span>
                   <h3>
                     {importing
-                      ? "Добавляем файлы…"
-                      : "Перетащите файлы вашего мода"}
+                      ? t("Добавляем файлы…")
+                      : t("Перетащите файлы вашего мода")}
                   </h3>
-                  <p>DLL, конфиги и ресурсы · до 200 МБ на проект</p>
+                  <p>{t("DLL, конфиги и ресурсы · до 200 МБ на проект")}</p>
                   <div className="inline-actions">
                     <button
                       className="button"
                       disabled={importing}
                       onClick={() => input.current?.click()}
                     >
-                      Выбрать файлы
+                      {t("Выбрать файлы")}
                     </button>
                     <button
                       className="button"
@@ -494,7 +522,7 @@ export default function Editor({
                       onClick={() => folder.current?.click()}
                     >
                       <FolderOpen size={15} />
-                      Выбрать папку
+                      {t("Выбрать папку")}
                     </button>
                   </div>
                 </div>
@@ -518,14 +546,14 @@ export default function Editor({
                   }
                 />
                 <p className="field-help">
-                  Выберите папку с содержимым будущего ZIP. Её имя не попадёт в
-                  архив. Файлы с одинаковым путём заменяются. .git, .env,
-                  node_modules, EXE, ZIP и PDB пропускаются.
+                  {t(
+                    "Выберите папку с содержимым будущего ZIP. Её имя не попадёт в архив. Файлы с одинаковым путём заменяются. .git, .env, node_modules, EXE, ZIP и PDB пропускаются.",
+                  )}
                 </p>
                 <div className="file-list">
                   <div className="file-list-header">
-                    <span>ПУТЬ В АРХИВЕ</span>
-                    <span>РАЗМЕР</span>
+                    <span>{t("ПУТЬ В АРХИВЕ")}</span>
+                    <span>{t("РАЗМЕР")}</span>
                   </div>
                   {[
                     "manifest.json",
@@ -536,7 +564,7 @@ export default function Editor({
                     <div className="file-row generated" key={name}>
                       <FileCode2 size={16} />
                       <strong>{name}</strong>
-                      <span>Из редактора</span>
+                      <span>{t("Из редактора")}</span>
                       <ShieldCheck size={14} />
                     </div>
                   ))}
@@ -547,7 +575,7 @@ export default function Editor({
                       <span>{sizeLabel(f.data.length)}</span>
                       <button
                         className="icon-button"
-                        aria-label={`Удалить ${f.path}`}
+                        aria-label={t("Удалить {0}", f.path)}
                         onClick={() =>
                           onChange({
                             ...p,
@@ -565,9 +593,9 @@ export default function Editor({
                 <div className="info-strip">
                   <Info size={18} />
                   <span>
-                    README, manifest и icon.png из корня импортируемой папки
-                    заменят поля редактора. Структуру BepInEx/plugins или
-                    другого загрузчика подготовьте в исходной папке.
+                    {t(
+                      "README, manifest и icon.png из корня импортируемой папки заменят поля редактора. Структуру BepInEx/plugins или другого загрузчика подготовьте в исходной папке.",
+                    )}
                   </span>
                 </div>
               </>
@@ -576,9 +604,11 @@ export default function Editor({
               <>
                 <div className="section-heading">
                   <div>
-                    <h2>Расскажите свою историю</h2>
+                    <h2>{t("Расскажите свою историю")}</h2>
                     <p>
-                      Инструкции, возможности и всё, что стоит знать игрокам.
+                      {t(
+                        "Инструкции, возможности и всё, что стоит знать игрокам.",
+                      )}
                     </p>
                   </div>
                 </div>
@@ -602,8 +632,37 @@ export default function Editor({
                     onClick={() => setPreview(!preview)}
                   >
                     {preview ? <Code2 size={14} /> : <FileText size={14} />}
-                    {preview ? "Редактировать" : "Предпросмотр"}
+                    {preview ? t("Редактировать") : t("Предпросмотр")}
                   </button>
+                </div>
+                <div className="template-tools">
+                  <button
+                    className="text-button"
+                    onClick={() => {
+                      if (
+                        p[doc].trim() &&
+                        !window.confirm(
+                          t(
+                            "Заменить текущий документ английским шаблоном? Это действие нельзя отменить.",
+                          ),
+                        )
+                      )
+                        return;
+                      onChange({
+                        ...p,
+                        [doc]:
+                          doc === "readme"
+                            ? modReadme(p.manifest.name, game.name)
+                            : modChangelog(p.manifest.version_number),
+                      });
+                      setPreview(false);
+                    }}
+                  >
+                    {t("Вставить английский шаблон")}
+                  </button>
+                  <span>
+                    {t("Текст пакета не зависит от языка интерфейса.")}
+                  </span>
                 </div>
                 {preview ? (
                   <div className="markdown-preview">
@@ -623,8 +682,9 @@ export default function Editor({
                         ),
                         img: ({ alt }) => (
                           <span className="markdown-image">
-                            [Изображение: {alt || "без описания"} — внешние
-                            изображения не загружаются]
+                            {t("[Изображение:")}
+                            {alt || t("без описания")}{" "}
+                            {t("— внешние изображения не загружаются]")}
                           </span>
                         ),
                       }}
@@ -646,8 +706,9 @@ export default function Editor({
                   />
                 )}
                 <p className="field-help">
-                  Markdown · UTF-8 · HTML не исполняется, внешние изображения не
-                  загружаются.
+                  {t(
+                    "Markdown · UTF-8 · HTML не исполняется, внешние изображения не загружаются.",
+                  )}
                 </p>
               </>
             )}
@@ -655,9 +716,11 @@ export default function Editor({
               <>
                 <div className="section-heading">
                   <div>
-                    <h2>Ничего не забыли?</h2>
+                    <h2>{t("Ничего не забыли?")}</h2>
                     <p>
-                      Добавьте пакеты, без которых ваш мод не сможет работать.
+                      {t(
+                        "Добавьте пакеты, без которых ваш мод не сможет работать.",
+                      )}
                     </p>
                   </div>
                   <Link2 size={23} />
@@ -670,19 +733,20 @@ export default function Editor({
                   }}
                 >
                   <input
-                    aria-label="Имя зависимости"
+                    aria-label={t("Имя зависимости")}
                     placeholder="Author-Package-1.0.0"
                     value={dep}
                     onChange={(e) => setDep(e.target.value)}
                   />
                   <button className="button primary">
                     <Plus size={17} />
-                    Добавить
+                    {t("Добавить")}
                   </button>
                 </form>
                 <p className="field-help">
-                  Скопируйте dependency string со страницы нужного пакета в
-                  Thunderstore.
+                  {t(
+                    "Скопируйте dependency string со страницы нужного пакета в Thunderstore.",
+                  )}
                 </p>
                 {p.manifest.dependencies.length ? (
                   <div className="dependency-list">
@@ -692,7 +756,7 @@ export default function Editor({
                         <strong>{d}</strong>
                         <button
                           className="icon-button"
-                          aria-label={`Удалить зависимость ${d}`}
+                          aria-label={t("Удалить зависимость {0}", d)}
                           onClick={() =>
                             changeManifest(
                               "dependencies",
@@ -710,18 +774,20 @@ export default function Editor({
                 ) : (
                   <div className="empty-state">
                     <Link2 size={34} />
-                    <h3>Без лишних зависимостей</h3>
+                    <h3>{t("Без лишних зависимостей")}</h3>
                     <p>
-                      Если мод работает сам по себе, оставьте список пустым.
+                      {t(
+                        "Если мод работает сам по себе, оставьте список пустым.",
+                      )}
                     </p>
                   </div>
                 )}
                 <div className="info-strip">
                   <Info size={18} />
                   <span>
-                    Не подставляем загрузчик автоматически: его версия и пакет
-                    зависят от игры. Существование зависимостей проверяет
-                    Thunderstore.
+                    {t(
+                      "Не подставляем загрузчик автоматически: его версия и пакет зависят от игры. Существование зависимостей проверяет Thunderstore.",
+                    )}
                   </span>
                 </div>
               </>
@@ -732,13 +798,18 @@ export default function Editor({
                   <div>
                     <h2>
                       {errors.length
-                        ? "Немного внимания к деталям"
-                        : "Всё готово к упаковке"}
+                        ? t("Немного внимания к деталям")
+                        : t("Всё готово к упаковке")}
                     </h2>
                     <p>
                       {errors.length
-                        ? `Исправьте ошибки: ${errors.length}. Затем можно собрать ZIP.`
-                        : "Локальные проверки пройдены. Предупреждения не мешают сборке."}
+                        ? t(
+                            "Исправьте ошибки: {0}. Затем можно собрать ZIP.",
+                            errors.length,
+                          )
+                        : t(
+                            "Локальные проверки пройдены. Предупреждения не мешают сборке.",
+                          )}
                     </p>
                   </div>
                   {errors.length ? (
@@ -763,10 +834,10 @@ export default function Editor({
                       </div>
                       <span>
                         {c.status === "ok"
-                          ? "Готово"
+                          ? t("Готово")
                           : c.status === "error"
-                            ? "Исправить"
-                            : "Важно"}
+                            ? t("Исправить")
+                            : t("Важно")}
                       </span>
                     </div>
                   ))}
@@ -781,7 +852,8 @@ export default function Editor({
                   ) : (
                     <FileArchive size={16} />
                   )}
-                  Собрать ZIP <ArrowRight size={16} />
+                  {t("Собрать ZIP")}
+                  <ArrowRight size={16} />
                 </button>
               </>
             )}
@@ -789,17 +861,21 @@ export default function Editor({
         </div>
         <aside className="editor-aside">
           <section className="panel package-preview">
-            <div className="eyebrow">ПРЕВЬЮ ПАКЕТА</div>
+            <div className="eyebrow">{t("ПРЕВЬЮ ПАКЕТА")}</div>
             <div
               className="package-preview-image"
               style={{ backgroundImage: `url('./art/${game.art}.svg')` }}
             >
               {iconUrl && <img src={iconUrl} alt="" />}
             </div>
-            <h3>{p.manifest.name || "Название мода"}</h3>
-            <span className="muted">от {p.team || "вашей команды"}</span>
+            <h3>{p.manifest.name || t("Название мода")}</h3>
+            <span className="muted">
+              {t("от")}
+              {p.team || t("вашей команды")}
+            </span>
             <p>
-              {p.manifest.description || "Здесь появится описание вашего мода."}
+              {p.manifest.description ||
+                t("Здесь появится описание вашего мода.")}
             </p>
             <div className="preview-tags">
               <span>{game.name}</span>
@@ -807,11 +883,11 @@ export default function Editor({
             </div>
             <div className="preview-divider" />
             <div className="preview-info">
-              <span>Зависимости</span>
+              <span>{t("Зависимости")}</span>
               <strong>{p.manifest.dependencies.length}</strong>
             </div>
             <div className="preview-info">
-              <span>Файлы мода</span>
+              <span>{t("Файлы мода")}</span>
               <strong>{p.files.length}</strong>
             </div>
           </section>
@@ -820,12 +896,14 @@ export default function Editor({
               <PackageCheck size={21} />
             </span>
             <h3>
-              {errors.length ? "Проверим перед стартом" : "Можно собирать"}
+              {errors.length
+                ? t("Проверим перед стартом")
+                : t("Можно собирать")}
             </h3>
             <p>
               {errors.length
-                ? `${errors.length} ошибок требуют внимания.`
-                : "Метаданные и структура прошли локальную проверку."}
+                ? t("{0} ошибок требуют внимания.", errors.length)
+                : t("Метаданные и структура прошли локальную проверку.")}
             </p>
             <div className="readiness-bar">
               <span
@@ -835,14 +913,16 @@ export default function Editor({
               />
             </div>
             <button className="text-button" onClick={() => setTab("checks")}>
-              Посмотреть проверку <ChevronRight size={15} />
+              {t("Посмотреть проверку")}
+              <ChevronRight size={15} />
             </button>
           </section>
           <div className="editor-tip">
             <ShieldCheck size={16} />
             <p>
-              Проект сохраняется автоматически. Сборка не публикует мод — всё
-              под вашим контролем.
+              {t(
+                "Проект сохраняется автоматически. Сборка не публикует мод — всё под вашим контролем.",
+              )}
             </p>
           </div>
         </aside>
@@ -899,8 +979,8 @@ function PublishDialog({
     /^[a-z0-9]+(-[a-z0-9]+)*$/.test(p.game);
   return (
     <Modal
-      title="Следующая остановка — Thunderstore"
-      subtitle="Публикация всегда требует вашего подтверждения."
+      title={t("Следующая остановка — Thunderstore")}
+      subtitle={t("Публикация всегда требует вашего подтверждения.")}
       onClose={() => {
         if (!busy) onClose();
       }}
@@ -912,36 +992,40 @@ function PublishDialog({
             {p.manifest.name} <span>v{p.manifest.version_number}</span>
           </strong>
           <p>
-            {p.team || "Команда не указана"} → {gameInfo(p.game).name}
+            {p.team || t("Команда не указана")} → {gameInfo(p.game).name}
           </p>
         </div>
       </div>
       {hasErrors && (
         <div className="info-strip warning">
           <CircleAlert size={18} />
-          <span>Сначала исправьте ошибки на вкладке «Проверка».</span>
+          <span>{t("Сначала исправьте ошибки на вкладке «Проверка».")}</span>
         </div>
       )}
       {result ? (
         <div className="empty-state">
           <CheckCircle2 size={36} />
-          <h3>Пакет отправлен в Thunderstore</h3>
+          <h3>{t("Пакет отправлен в Thunderstore")}</h3>
           <p>
-            Сообщество может требовать модерацию перед появлением в каталоге.
+            {t(
+              "Сообщество может требовать модерацию перед появлением в каталоге.",
+            )}
           </p>
           <button
             className="button primary"
             onClick={() => openExternal(result)}
           >
-            Открыть пакет <ExternalLink size={16} />
+            {t("Открыть пакет")}
+            <ExternalLink size={16} />
           </button>
         </div>
       ) : (
         <>
-          <h3 className="publish-title">Через официальный сайт</h3>
+          <h3 className="publish-title">{t("Через официальный сайт")}</h3>
           <p className="modal-copy">
-            Универсальный способ: соберите архив и загрузите его на странице
-            публикации нужного сообщества. Войдите в аккаунт в своём браузере.
+            {t(
+              "Универсальный способ: соберите архив и загрузите его на странице публикации нужного сообщества. Войдите в аккаунт в своём браузере.",
+            )}
           </p>
           <div className="inline-actions">
             <button
@@ -950,7 +1034,7 @@ function PublishDialog({
               onClick={onBuild}
             >
               <Download size={15} />
-              Собрать ZIP
+              {t("Собрать ZIP")}
             </button>
             <button
               disabled={!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(p.game)}
@@ -959,43 +1043,51 @@ function PublishDialog({
                 openExternal(`https://thunderstore.io/c/${p.game}/create/`)
               }
             >
-              Открыть публикацию <ExternalLink size={14} />
+              {t("Открыть публикацию")}
+              <ExternalLink size={14} />
             </button>
           </div>
           <div className="preview-divider" />
           <h3 className="publish-title">
-            Напрямую из EXE <span className="badge">Экспериментально</span>
+            {t("Напрямую из EXE")}
+            <span className="badge">{t("Экспериментально")}</span>
           </h3>
           {!window.tsat ? (
             <div className="desktop-only">
               <Info size={21} />
               <p>
-                API-публикация доступна только в настольной версии. В веб-превью
-                используйте ZIP и сайт.
+                {t(
+                  "API-публикация доступна только в настольной версии. В веб-превью используйте ZIP и сайт.",
+                )}
               </p>
             </div>
           ) : !token ? (
             <button className="button" onClick={onAccount}>
               <ShieldCheck size={16} />
-              Подключить токен команды
+              {t("Подключить токен команды")}
             </button>
           ) : (
             <>
               {!validMeta && (
                 <p className="error-text">
-                  Укажите корректную команду и сообщество на вкладке Manifest.
+                  {t(
+                    "Укажите корректную команду и сообщество на вкладке Manifest.",
+                  )}
                 </p>
               )}
               <label className="field">
-                Категории <span className="optional">необязательно</span>
+                {t("Категории")}
+                <span className="optional">{t("необязательно")}</span>
                 <input
                   value={categories}
                   onChange={(e) => setCategories(e.target.value)}
-                  placeholder="Слаги через запятую: mods, tools"
+                  placeholder={t("Слаги через запятую: mods, tools")}
                   disabled={busy}
                 />
                 <small>
-                  Доступные категории зависят от сообщества. Их проверит сервер.
+                  {t(
+                    "Доступные категории зависят от сообщества. Их проверит сервер.",
+                  )}
                 </small>
               </label>
               <label className="checkbox-field">
@@ -1005,7 +1097,7 @@ function PublishDialog({
                   onChange={(e) => setNsfw(e.target.checked)}
                   disabled={busy}
                 />
-                Пакет содержит NSFW-контент
+                {t("Пакет содержит NSFW-контент")}
               </label>
               <label className="checkbox-field">
                 <input
@@ -1014,8 +1106,10 @@ function PublishDialog({
                   onChange={(e) => setConsent(e.target.checked)}
                   disabled={busy}
                 />
-                Я проверил файлы и готов опубликовать эту версию от имени
-                команды {p.team || "…"}.
+                {t(
+                  "Я проверил файлы и готов опубликовать эту версию от имени команды",
+                )}
+                {p.team || "…"}.
               </label>
               <button
                 className="button primary full-width"
@@ -1036,7 +1130,7 @@ function PublishDialog({
                         .filter(Boolean),
                     });
                     setResult(r.url);
-                    notify("Thunderstore принял пакет.");
+                    notify(t("Thunderstore принял пакет."));
                   } catch (e) {
                     setError((e as Error).message);
                   } finally {
@@ -1050,8 +1144,8 @@ function PublishDialog({
                   <Rocket size={16} />
                 )}
                 {busy
-                  ? "Отправляем пакет… Не закрывайте приложение"
-                  : "Опубликовать эту версию"}
+                  ? t("Отправляем пакет… Не закрывайте приложение")
+                  : t("Опубликовать эту версию")}
               </button>
               {error && (
                 <p className="error-text" role="alert">
@@ -1059,8 +1153,9 @@ function PublishDialog({
                 </p>
               )}
               <p className="field-help">
-                Не повторяйте отправку после обрыва связи, пока не проверите
-                страницу пакета: сервер мог уже принять версию.
+                {t(
+                  "Не повторяйте отправку после обрыва связи, пока не проверите страницу пакета: сервер мог уже принять версию.",
+                )}
               </p>
             </>
           )}

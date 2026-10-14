@@ -1,3 +1,5 @@
+import { modReadme, modChangelog } from "./templates";
+import { t } from "./i18n";
 export interface Manifest {
   name: string;
   version_number: string;
@@ -32,6 +34,7 @@ export interface BuildRecord {
   filename: string;
 }
 export interface Preferences {
+  language: "ru" | "en";
   theme: "light" | "dark";
   accent: string;
   weather: "none" | "snow" | "rain";
@@ -40,6 +43,7 @@ export interface Preferences {
   opacity: number;
 }
 export const defaults: Preferences = {
+  language: "ru",
   theme: "light",
   accent: "#247d60",
   weather: "none",
@@ -87,6 +91,14 @@ export const games = [
     art: "valheim",
     color: "#c38c59",
     tag: "RPG",
+  },
+  {
+    id: "boneworks",
+    name: "BONEWORKS",
+    subtitle: "Физика без границ",
+    art: "risk",
+    color: "#bd9c66",
+    tag: "VR",
   },
   {
     id: "bonelab",
@@ -154,8 +166,8 @@ export function newProject(
       description: "",
       dependencies: [],
     },
-    readme: `# ${name}\n\nОписание вашего мода.\n\n## Установка\n\nУстановите через совместимый менеджер модов.\n\n## Возможности\n\n- Расскажите, что нового добавляет мод.\n`,
-    changelog: "# Changelog\n\n## 1.0.0\n\n- Первый релиз.\n",
+    readme: modReadme(name, gameInfo(game).name),
+    changelog: modChangelog(),
     files: [],
     updatedAt: Date.now(),
     createdAt: Date.now(),
@@ -164,13 +176,21 @@ export function newProject(
 }
 export function starterProjects(): Project[] {
   return [
-    ["Northern_Lights", "valheim", "Новая атмосфера северных приключений."],
+    [
+      "Northern_Lights",
+      "valheim",
+      "A new atmosphere for your northern adventures.",
+    ],
     [
       "Company_Extras",
       "lethal-company",
-      "Небольшие улучшения для большой команды.",
+      "Small improvements for a great crew.",
     ],
-    ["Beyond_Petrichor", "riskofrain2", "Новый взгляд на знакомую планету."],
+    [
+      "Beyond_Petrichor",
+      "riskofrain2",
+      "A fresh perspective on a familiar planet.",
+    ],
   ].map(([name, game, description]) => ({
     ...newProject(name, game, true),
     manifest: {
@@ -184,7 +204,7 @@ export function starterProjects(): Project[] {
 }
 export const sizeLabel = (n: number) =>
   n < 1024
-    ? `${n} Б`
+    ? `${n} ${t("Б")}`
     : n < 1048576
-      ? `${(n / 1024).toFixed(1)} КБ`
-      : `${(n / 1048576).toFixed(1)} МБ`;
+      ? `${(n / 1024).toFixed(1)} ${t("КБ")}`
+      : `${(n / 1048576).toFixed(1)} ${t("МБ")}`;

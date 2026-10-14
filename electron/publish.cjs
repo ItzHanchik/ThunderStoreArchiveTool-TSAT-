@@ -1,3 +1,4 @@
+const { t } = require("../shared/i18n.cjs");
 const { createHash } = require("node:crypto");
 const BASE = "https://thunderstore.io/api/experimental/";
 function validateMetadata(m) {
@@ -13,7 +14,7 @@ function validateMetadata(m) {
       (s) => typeof s === "string" && /^[a-z0-9_-]{1,128}$/.test(s),
     )
   )
-    throw new Error("Некорректные параметры публикации.");
+    throw new Error(t("Некорректные параметры публикации."));
 }
 function allowedUpload(url) {
   try {
@@ -46,7 +47,7 @@ async function publishPackage(bytes, metadata, token, fetcher = fetch) {
     });
     if (!r.ok)
       throw new Error(
-        `Thunderstore: HTTP ${r.status}. ${r.status === 401 || r.status === 403 ? "Проверьте токен и права команды." : "Проверьте версию, зависимости, категории и правила сообщества. Подробности доступны при загрузке ZIP через сайт."}`,
+        `Thunderstore: HTTP ${r.status}. ${r.status === 401 || r.status === 403 ? t("Проверьте токен и права команды.") : t("Проверьте версию, зависимости, категории и правила сообщества. Подробности доступны при загрузке ZIP через сайт.")}`,
       );
     return r.status === 204 ? null : r.json();
   }
@@ -60,14 +61,14 @@ async function publishPackage(bytes, metadata, token, fetcher = fetch) {
     uuid = init?.user_media?.uuid;
     if (typeof uuid !== "string" || !/^[0-9a-f-]{36}$/i.test(uuid)) {
       uuid = undefined;
-      throw new Error("Неожиданный ответ сервера загрузки.");
+      throw new Error(t("Неожиданный ответ сервера загрузки."));
     }
     if (
       !Array.isArray(init.upload_urls) ||
       !init.upload_urls.length ||
       init.upload_urls.length > 1000
     )
-      throw new Error("Сервер не предоставил части загрузки.");
+      throw new Error(t("Сервер не предоставил части загрузки."));
     let covered = 0;
     const plans = [...init.upload_urls].sort((a, b) => a.offset - b.offset);
     const partNumbers = new Set();
@@ -84,13 +85,15 @@ async function publishPackage(bytes, metadata, token, fetcher = fetch) {
         !allowedUpload(p.url)
       )
         throw new Error(
-          "Небезопасный или неподдерживаемый план загрузки. Используйте публикацию через сайт.",
+          t(
+            "Небезопасный или неподдерживаемый план загрузки. Используйте публикацию через сайт.",
+          ),
         );
       partNumbers.add(p.part_number);
       covered += p.length;
     }
     if (covered !== bytes.length)
-      throw new Error("Сервер запросил неполный архив.");
+      throw new Error(t("Сервер запросил неполный архив."));
     const parts = [];
     for (const p of plans) {
       const chunk = bytes.subarray(p.offset, p.offset + p.length);
@@ -105,7 +108,7 @@ async function publishPackage(bytes, metadata, token, fetcher = fetch) {
       });
       if (!r.ok || !r.headers.get("etag"))
         throw new Error(
-          `Не удалось отправить часть архива (HTTP ${r.status}).`,
+          t("Не удалось отправить часть архива (HTTP {0}).", r.status),
         );
       parts.push({ ETag: r.headers.get("etag"), PartNumber: p.part_number });
     }
@@ -121,7 +124,9 @@ async function publishPackage(bytes, metadata, token, fetcher = fetch) {
     });
     if (!result?.package_version?.name)
       throw new Error(
-        "Ответ публикации не распознан. Проверьте сайт перед повторной отправкой.",
+        t(
+          "Ответ публикации не распознан. Проверьте сайт перед повторной отправкой.",
+        ),
       );
     return {
       url: `https://thunderstore.io/c/${metadata.community}/p/${encodeURIComponent(metadata.team)}/${encodeURIComponent(result.package_version.name)}/`,
@@ -137,8 +142,10 @@ async function publishPackage(bytes, metadata, token, fetcher = fetch) {
     if (e instanceof Error && !/fetch|timeout|abort/i.test(e.message)) throw e;
     throw new Error(
       submitting
-        ? "Соединение прервано при публикации. Проверьте страницу пакета перед повторной отправкой."
-        : "Ошибка сети. Проверьте соединение и попробуйте позже.",
+        ? t(
+            "Соединение прервано при публикации. Проверьте страницу пакета перед повторной отправкой.",
+          )
+        : t("Ошибка сети. Проверьте соединение и попробуйте позже."),
     );
   }
 }

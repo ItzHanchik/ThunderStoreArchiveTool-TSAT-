@@ -17,4 +17,4 @@ Do not disclose working tokens in a public issue. Revoke exposed tokens in Thund
 
 ## Verification limits
 
-Local validation is not a replacement for Thunderstore server validation. The Windows executable, system key storage, installation/uninstallation, and live API publishing need a Windows smoke test before release. API contract tests use mocked network responses and do not publish real packages.
+Local validation is not a replacement for Thunderstore server validation. Windows CI exercises the packaged executable, safeStorage encryption/decryption, import, ZIP export, and persisted RU/EN preferences. Installation/uninstallation, portable behavior, and live API publishing still require hands-on testing before considering this a stable release. API contract tests use mocked network responses and do not publish real packages.

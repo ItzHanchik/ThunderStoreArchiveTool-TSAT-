@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import { get, set } from "idb-keyval";
 import type { BuildRecord, Preferences, Project } from "./model";
 import { defaults, starterProjects } from "./model";
@@ -9,7 +10,14 @@ export interface Workspace {
 export async function loadWorkspace(): Promise<Workspace> {
   const saved = await get<Workspace>("tsat-workspace-v1");
   return saved
-    ? { ...saved, preferences: { ...defaults, ...saved.preferences } }
+    ? {
+        ...saved,
+        preferences: {
+          ...defaults,
+          ...saved.preferences,
+          language: saved.preferences?.language === "en" ? "en" : "ru",
+        },
+      }
     : { projects: starterProjects(), history: [], preferences: defaults };
 }
 export const saveWorkspace = (w: Workspace) => set("tsat-workspace-v1", w);
@@ -35,7 +43,7 @@ export async function createIcon(
   ctx.fillText(letter.slice(0, 1).toUpperCase(), 128, 137);
   const blob = await new Promise<Blob>((resolve, reject) =>
     c.toBlob(
-      (b) => (b ? resolve(b) : reject(new Error("Не удалось создать PNG"))),
+      (b) => (b ? resolve(b) : reject(new Error(t("Не удалось создать PNG")))),
       "image/png",
     ),
   );

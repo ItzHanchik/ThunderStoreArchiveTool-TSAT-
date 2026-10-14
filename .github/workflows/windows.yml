@@ -5,7 +5,7 @@ on:
     tags: ["v*"]
     branches: ["arena/d73b8dfa-thunderstorearchivetool-tsat"]
 permissions:
-  contents: read
+  contents: write
 jobs:
   windows:
     runs-on: windows-latest
@@ -38,3 +38,26 @@ jobs:
             test-results/windows-desktop.png
           if-no-files-found: error
           retention-days: 30
+      - name: Attach verified binaries to an explicitly prepared draft release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BUILD_SHA: ${{ github.sha }}
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          $tag = "v$version"
+          $releaseJson = gh release view $tag --json isDraft,targetCommitish 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "No draft release prepared. Binaries remain in workflow artifacts."
+            exit 0
+          }
+          $release = $releaseJson | ConvertFrom-Json
+          if (-not $release.isDraft -or $release.targetCommitish -ne $env:BUILD_SHA) {
+            Write-Host "Release does not match this build. No assets changed."
+            exit 0
+          }
+          $assets = @(Get-ChildItem release/*.exe | ForEach-Object { $_.FullName })
+          $assets += (Resolve-Path release/SHA256SUMS.txt).Path
+          gh release upload $tag @assets --clobber
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

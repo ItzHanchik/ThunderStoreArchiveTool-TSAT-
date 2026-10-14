@@ -1,3 +1,4 @@
+import { t, setLanguage, dateLocale } from "./lib/i18n";
 import {
   useEffect,
   useRef,
@@ -66,16 +67,17 @@ import { Modal } from "./components";
 type Page = "online" | "projects" | "games" | "history" | "guide";
 type Dialog = "new" | "appearance" | "account" | null;
 const pageTitles: Record<Page, string> = {
-  online: "Каталог Thunderstore",
-  projects: "Мои проекты",
-  games: "Игры и сообщества",
-  history: "История сборок",
-  guide: "Как это работает",
+  online: t("Каталог Thunderstore"),
+  projects: t("Мои проекты"),
+  games: t("Игры и сообщества"),
+  history: t("История сборок"),
+  guide: t("Как это работает"),
 };
 export default function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [history, setHistory] = useState<BuildRecord[]>([]);
   const [preferences, setPreferences] = useState<Preferences>(defaults);
+  setLanguage(preferences.language);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [page, setPage] = useState<Page>("projects");
@@ -86,12 +88,16 @@ export default function App() {
   const [layout, setLayout] = useState("grid");
   const [sort, setSort] = useState("updated");
   const [toast, setToast] = useState("");
-  const [saveState, setSaveState] = useState("Сохранено на устройстве");
+  const [saveState, setSaveState] = useState(t("Сохранено на устройстве"));
   const [building, setBuilding] = useState(false);
   const [newGame, setNewGame] = useState("valheim");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const search = useRef<HTMLInputElement>(null);
   const saveQueue = useRef(Promise.resolve());
+  useEffect(() => {
+    document.documentElement.lang = preferences.language;
+    void window.tsat?.setLanguage(preferences.language).catch(() => {});
+  }, [preferences.language]);
   const active = projects.find((p) => p.id === activeId);
   const notify = (message: string) => setToast(message);
   useEffect(() => {
@@ -118,7 +124,9 @@ export default function App() {
         if (!cancelled) {
           setLoadError(true);
           setToast(
-            "Не удалось прочитать локальные данные. Проверьте разрешение на хранение данных и перезагрузите приложение.",
+            t(
+              "Не удалось прочитать локальные данные. Проверьте разрешение на хранение данных и перезагрузите приложение.",
+            ),
           );
         }
       });
@@ -128,16 +136,18 @@ export default function App() {
   }, []);
   useEffect(() => {
     if (!loaded) return;
-    setSaveState("Сохранение…");
+    setSaveState(t("Сохранение…"));
     {
       saveQueue.current = saveQueue.current
         .catch(() => {})
         .then(() => saveWorkspace({ projects, history, preferences }))
-        .then(() => setSaveState("Сохранено на устройстве"))
+        .then(() => setSaveState(t("Сохранено на устройстве")))
         .catch(() => {
-          setSaveState("Ошибка сохранения");
+          setSaveState(t("Ошибка сохранения"));
           notify(
-            "Хранилище недоступно или заполнено. Экспортируйте важные проекты и освободите место.",
+            t(
+              "Хранилище недоступно или заполнено. Экспортируйте важные проекты и освободите место.",
+            ),
           );
         });
     }
@@ -187,7 +197,7 @@ export default function App() {
       const filename = `${p.manifest.name}-${p.manifest.version_number}.zip`;
       const saved = await exportBytes(bytes, filename);
       if (!saved) {
-        notify("Сохранение отменено.");
+        notify(t("Сохранение отменено."));
         return;
       }
       setHistory((h) =>
@@ -204,9 +214,9 @@ export default function App() {
           ...h,
         ].slice(0, 100),
       );
-      notify(`Готово! ${filename} · ${sizeLabel(bytes.length)}`);
+      notify(t("Готово! {0} · {1}", filename, sizeLabel(bytes.length)));
     } catch (e) {
-      notify(`Сборка не выполнена: ${(e as Error).message}`);
+      notify(t("Сборка не выполнена: {0}", (e as Error).message));
     } finally {
       setBuilding(false);
     }
@@ -224,7 +234,7 @@ export default function App() {
       template: false,
     };
     setProjects((ps) => [next, ...ps]);
-    notify("Создана независимая копия проекта.");
+    notify(t("Создана независимая копия проекта."));
   }
   const filtered = projects
     .filter(
@@ -254,7 +264,7 @@ export default function App() {
         <button
           className="brand"
           onClick={() => navigate("projects")}
-          aria-label="TSAT — Главная"
+          aria-label={t("TSAT — Главная")}
         >
           <span className="brand-mark">
             <Zap size={24} fill="currentColor" />
@@ -266,18 +276,19 @@ export default function App() {
         <div className="workspace-chip">
           <span className="workspace-avatar">W</span>
           <div>
-            Личное пространство<small>Всё для вашего следующего мода</small>
+            {t("Личное пространство")}
+            <small>{t("Всё для вашего следующего мода")}</small>
           </div>
           <ChevronDown size={14} />
         </div>
-        <span className="nav-label">РАБОЧЕЕ ПРОСТРАНСТВО</span>
+        <span className="nav-label">{t("РАБОЧЕЕ ПРОСТРАНСТВО")}</span>
         <nav>
           {(
             [
-              ["projects", FolderOpen, "Мои проекты"],
-              ["games", Gamepad2, "Игры и сообщества"],
-              ["history", FileArchive, "История сборок"],
-              ["online", Boxes, "Каталог Thunderstore"],
+              ["projects", FolderOpen, t("Мои проекты")],
+              ["games", Gamepad2, t("Игры и сообщества")],
+              ["history", FileArchive, t("История сборок")],
+              ["online", Boxes, t("Каталог Thunderstore")],
             ] as const
           ).map(([id, Icon, label]) => (
             <button
@@ -291,11 +302,11 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <span className="nav-label second">ИНСТРУМЕНТЫ</span>
+        <span className="nav-label second">{t("ИНСТРУМЕНТЫ")}</span>
         <nav>
           <button className="nav-item" onClick={() => setDialog("appearance")}>
             <Palette size={19} />
-            <span>Персонализация</span>
+            <span>{t("Персонализация")}</span>
             <span className="little-dot" />
           </button>
           <button
@@ -303,7 +314,7 @@ export default function App() {
             onClick={() => navigate("guide")}
           >
             <BookOpen size={19} />
-            <span>С чего начать</span>
+            <span>{t("С чего начать")}</span>
             <ExternalLink size={13} />
           </button>
         </nav>
@@ -312,14 +323,15 @@ export default function App() {
             <div className="local-note-icon">
               <ShieldCheck size={19} />
             </div>
-            <strong>Ваши моды. Ваши правила.</strong>
+            <strong>{t("Ваши моды. Ваши правила.")}</strong>
             <p>
-              Проекты остаются на устройстве.
+              {t("Проекты остаются на устройстве.")}
               <br />
-              Творчество — без лишнего шума.
+              {t("Творчество — без лишнего шума.")}
             </p>
             <button onClick={() => navigate("guide")}>
-              Больше о TSAT <ArrowUpRight />
+              {t("Больше о TSAT")}
+              <ArrowUpRight />
             </button>
           </div>
           <button
@@ -330,7 +342,8 @@ export default function App() {
               <UserRound size={19} />
             </span>
             <span>
-              Аккаунт Thunderstore<small>Подключить команду</small>
+              {t("Аккаунт Thunderstore")}
+              <small>{t("Подключить команду")}</small>
             </span>
             <ChevronRight size={16} />
           </button>
@@ -345,16 +358,30 @@ export default function App() {
       <div className="main-shell">
         <header className="topbar">
           <div className="breadcrumb">
-            <span>Рабочее пространство</span>
+            <span>{t("Рабочее пространство")}</span>
             <ChevronRight size={13} />
-            <strong>{active ? active.manifest.name : pageTitles[page]}</strong>
+            <strong>
+              {active ? active.manifest.name : t(pageTitles[page])}
+            </strong>
           </div>
           <div className="top-actions">
+            <button
+              className="button small language-toggle"
+              aria-label="Русский / English"
+              onClick={() =>
+                setPreferences((p) => ({
+                  ...p,
+                  language: p.language === "ru" ? "en" : "ru",
+                }))
+              }
+            >
+              {preferences.language.toUpperCase()}
+            </button>
             <label className="global-search">
               <Search size={16} />
               <input
                 ref={search}
-                placeholder="Найти проект…"
+                placeholder={t("Найти проект…")}
                 value={query}
                 onChange={(e) => {
                   setQuery(e.target.value);
@@ -366,7 +393,7 @@ export default function App() {
             </label>
             <button
               className="icon-button"
-              title="Изменить тему"
+              title={t("Изменить тему")}
               onClick={() =>
                 setPreferences((p) => ({
                   ...p,
@@ -383,7 +410,7 @@ export default function App() {
             <span className="top-divider" />
             <button
               className="top-avatar"
-              title="Аккаунт"
+              title={t("Аккаунт")}
               onClick={() => setDialog("account")}
             >
               T
@@ -395,12 +422,15 @@ export default function App() {
             <div className="empty-state">
               <Loader2 className={loadError ? "" : "spin"} />
               <h2>
-                {loadError ? "Хранилище недоступно" : "Открываем мастерскую…"}
+                {loadError
+                  ? t("Хранилище недоступно")
+                  : t("Открываем мастерскую…")}
               </h2>
               {loadError && (
                 <p>
-                  Данные не перезаписаны. Разрешите локальное хранение и
-                  перезагрузите страницу.
+                  {t(
+                    "Данные не перезаписаны. Разрешите локальное хранение и перезагрузите страницу.",
+                  )}
                 </p>
               )}
             </div>
@@ -418,24 +448,26 @@ export default function App() {
             <>
               <div className="page-heading">
                 <div>
-                  <div className="eyebrow">ВАША МАСТЕРСКАЯ МОДОВ</div>
+                  <div className="eyebrow">{t("ВАША МАСТЕРСКАЯ МОДОВ")}</div>
                   <h1>
-                    {pageTitles[page]}
+                    {t(pageTitles[page])}
                     <span className="heading-dot">.</span>
                   </h1>
                   <p>
                     {page === "projects"
-                      ? "От первой идеи до готового архива. Всё в одном месте."
+                      ? t(
+                          "От первой идеи до готового архива. Всё в одном месте.",
+                        )
                       : page === "games"
-                        ? "Разные миры. Один привычный рабочий процесс."
+                        ? t("Разные миры. Один привычный рабочий процесс.")
                         : page === "history"
-                          ? "Каждый релиз — ещё один шаг вперёд."
-                          : "Меньше рутины. Больше времени на создание."}
+                          ? t("Каждый релиз — ещё один шаг вперёд.")
+                          : t("Меньше рутины. Больше времени на создание.")}
                   </p>
                 </div>
                 <button className="button primary" onClick={() => create()}>
                   <Plus size={18} />
-                  Новый проект
+                  {t("Новый проект")}
                 </button>
               </div>
               {page === "projects" && (
@@ -445,23 +477,26 @@ export default function App() {
                       <section className="hero">
                         <div className="hero-content">
                           <span className="hero-kicker">
-                            <span /> СОЗДАВАЙТЕ. УПАКОВЫВАЙТЕ. ДЕЛИТЕСЬ.
+                            <span /> {t("СОЗДАВАЙТЕ. УПАКОВЫВАЙТЕ. ДЕЛИТЕСЬ.")}
                           </span>
                           <h2>
-                            Большие идеи.
+                            {t("Большие идеи.")}
                             <br />
-                            Аккуратные архивы.
+                            {t("Аккуратные архивы.")}
                           </h2>
                           <p>
-                            Вы создаёте моды — мы позаботимся о деталях.
+                            {t("Вы создаёте моды — мы позаботимся о деталях.")}
                             <br />
-                            Правильная структура, проверка и ZIP в пару кликов.
+                            {t(
+                              "Правильная структура, проверка и ZIP в пару кликов.",
+                            )}
                           </p>
                           <button
                             className="button hero-button"
                             onClick={() => create()}
                           >
-                            Создать что-то классное <ArrowRight size={16} />
+                            {t("Создать что-то классное")}
+                            <ArrowRight size={16} />
                           </button>
                         </div>
                         <span className="hero-bottom">
@@ -472,22 +507,22 @@ export default function App() {
                         <Stat
                           icon={<Folder size={19} />}
                           value={projects.length.toString().padStart(2, "0")}
-                          label="проектов в работе"
-                          detail="Все идеи под рукой"
+                          label={t("проектов в работе")}
+                          detail={t("Все идеи под рукой")}
                         />
                         <Stat
                           icon={<Gamepad2 size={19} />}
                           value={new Set(projects.map((p) => p.game)).size
                             .toString()
                             .padStart(2, "0")}
-                          label="игровых сообществ"
-                          detail="Без привязки к одной игре"
+                          label={t("игровых сообществ")}
+                          detail={t("Без привязки к одной игре")}
                         />
                         <Stat
                           icon={<Boxes size={19} />}
                           value={history.length.toString().padStart(2, "0")}
-                          label="архивов собрано"
-                          detail="Маленькие шаги. Большие релизы."
+                          label={t("архивов собрано")}
+                          detail={t("Маленькие шаги. Большие релизы.")}
                         />
                       </section>
                     </>
@@ -496,20 +531,20 @@ export default function App() {
                     <div className="section-heading">
                       <div>
                         <h2>
-                          Библиотека проектов{" "}
+                          {t("Библиотека проектов")}{" "}
                           <span className="count-badge">{projects.length}</span>
                         </h2>
-                        <p>Ваш следующий релиз начинается здесь</p>
+                        <p>{t("Ваш следующий релиз начинается здесь")}</p>
                       </div>
                       <div className="filters">
                         <label className="select-control">
                           <SlidersHorizontal size={14} />
                           <select
-                            aria-label="Фильтр по игре"
+                            aria-label={t("Фильтр по игре")}
                             value={game}
                             onChange={(e) => setGame(e.target.value)}
                           >
-                            <option value="all">Все игры</option>
+                            <option value="all">{t("Все игры")}</option>
                             {[...new Set(projects.map((p) => p.game))].map(
                               (id) => (
                                 <option key={id} value={id}>
@@ -521,17 +556,19 @@ export default function App() {
                         </label>
                         <label className="select-control sort-control">
                           <select
-                            aria-label="Сортировка"
+                            aria-label={t("Сортировка")}
                             value={sort}
                             onChange={(e) => setSort(e.target.value)}
                           >
-                            <option value="updated">По обновлению</option>
-                            <option value="name">По названию</option>
+                            <option value="updated">
+                              {t("По обновлению")}
+                            </option>
+                            <option value="name">{t("По названию")}</option>
                           </select>
                         </label>
                         <div className="view-switch">
                           <button
-                            aria-label="Сетка"
+                            aria-label={t("Сетка")}
                             aria-pressed={layout === "grid"}
                             className={layout === "grid" ? "selected" : ""}
                             onClick={() => setLayout("grid")}
@@ -539,7 +576,7 @@ export default function App() {
                             <Grid2X2 size={16} />
                           </button>
                           <button
-                            aria-label="Список"
+                            aria-label={t("Список")}
                             aria-pressed={layout === "list"}
                             className={layout === "list" ? "selected" : ""}
                             onClick={() => setLayout("list")}
@@ -567,13 +604,17 @@ export default function App() {
                         <FolderOpen size={34} />
                         <h3>
                           {projects.length
-                            ? "Ничего не нашлось"
-                            : "Место для вашей первой идеи"}
+                            ? t("Ничего не нашлось")
+                            : t("Место для вашей первой идеи")}
                         </h3>
                         <p>
                           {projects.length
-                            ? "Попробуйте другой запрос или выберите все игры."
-                            : "Создайте проект и добавьте файлы своего мода."}
+                            ? t(
+                                "Попробуйте другой запрос или выберите все игры.",
+                              )
+                            : t(
+                                "Создайте проект и добавьте файлы своего мода.",
+                              )}
                         </p>
                         <button
                           className="button"
@@ -585,8 +626,8 @@ export default function App() {
                           }}
                         >
                           {projects.length
-                            ? "Сбросить фильтры"
-                            : "Создать проект"}
+                            ? t("Сбросить фильтры")
+                            : t("Создать проект")}
                         </button>
                       </div>
                     )}
@@ -597,41 +638,43 @@ export default function App() {
                         <Sparkles size={20} />
                       </span>
                       <div>
-                        <h3>От идеи до релиза</h3>
-                        <p>Три простых шага. Никакой магии.</p>
+                        <h3>{t("От идеи до релиза")}</h3>
+                        <p>{t("Три простых шага. Никакой магии.")}</p>
                       </div>
                       <button
                         onClick={() => navigate("guide")}
                         className="text-button"
                       >
-                        Краткое руководство <ArrowRight size={15} />
+                        {t("Краткое руководство")}
+                        <ArrowRight size={15} />
                       </button>
                     </div>
                     <div className="steps">
                       <Step
                         number="01"
-                        title="Добавьте файлы"
-                        text="Выберите игру и соберите свой проект."
+                        title={t("Добавьте файлы")}
+                        text={t("Выберите игру и соберите свой проект.")}
                       />
                       <Step
                         number="02"
-                        title="Проверьте детали"
-                        text="TSAT проверит manifest, иконку и структуру."
+                        title={t("Проверьте детали")}
+                        text={t("TSAT проверит manifest, иконку и структуру.")}
                       />
                       <Step
                         number="03"
-                        title="Поделитесь с миром"
-                        text="Соберите ZIP для публикации в Thunderstore."
+                        title={t("Поделитесь с миром")}
+                        text={t("Соберите ZIP для публикации в Thunderstore.")}
                       />
                     </div>
                   </section>
                   <div className="bottom-tip">
                     <span>
-                      <span className="tiny-spark">✧</span> Пространство,
-                      которое вдохновляет.
+                      <span className="tiny-spark">✧</span>{" "}
+                      {t("Пространство, которое вдохновляет.")}
                     </span>
                     <button onClick={() => setDialog("appearance")}>
-                      Настроить тему, фон и атмосферу <ArrowRight size={14} />
+                      {t("Настроить тему, фон и атмосферу")}
+                      <ArrowRight size={14} />
                     </button>
                   </div>
                 </>
@@ -659,7 +702,9 @@ export default function App() {
                     setActiveId(p.id);
                     setPage("projects");
                     notify(
-                      "Создан черновик метаданных. Добавьте свои файлы, иконку и README. Права на пакет не передаются.",
+                      t(
+                        "Создан черновик метаданных. Добавьте свои файлы, иконку и README. Права на пакет не передаются.",
+                      ),
                     );
                   }}
                 />
@@ -669,8 +714,9 @@ export default function App() {
                   <div className="info-strip">
                     <Gamepad2 size={20} />
                     <span>
-                      Универсальный manifest v1. TSAT не навязывает загрузчик
-                      или структуру файлов — они зависят от вашей игры.
+                      {t(
+                        "Универсальный manifest v1. TSAT не навязывает загрузчик или структуру файлов — они зависят от вашей игры.",
+                      )}
                     </span>
                   </div>
                   <div className="games-grid">
@@ -684,9 +730,10 @@ export default function App() {
                         <span className="game-tag">{g.tag}</span>
                         <div>
                           <h3>{g.name}</h3>
-                          <p>{g.subtitle}</p>
+                          <p>{t(g.subtitle)}</p>
                           <span>
-                            Создать проект <Plus size={16} />
+                            {t("Создать проект")}
+                            <Plus size={16} />
                           </span>
                         </div>
                       </button>
@@ -694,14 +741,16 @@ export default function App() {
                   </div>
                   <div className="custom-game">
                     <div>
-                      <h3>Ваша игра не в списке?</h3>
+                      <h3>{t("Ваша игра не в списке?")}</h3>
                       <p>
-                        Укажите идентификатор любого сообщества Thunderstore при
-                        создании проекта.
+                        {t(
+                          "Укажите идентификатор любого сообщества Thunderstore при создании проекта.",
+                        )}
                       </p>
                     </div>
                     <button className="button" onClick={() => create("custom")}>
-                      Другая игра <Plus size={16} />
+                      {t("Другая игра")}
+                      <Plus size={16} />
                     </button>
                   </div>
                 </>
@@ -710,10 +759,11 @@ export default function App() {
                 <section className="panel">
                   <div className="section-heading">
                     <div>
-                      <h2>Локальный журнал</h2>
+                      <h2>{t("Локальный журнал")}</h2>
                       <p>
-                        Последние 100 экспортов. ZIP хранится в выбранной вами
-                        папке, а не в журнале.
+                        {t(
+                          "Последние 100 экспортов. ZIP хранится в выбранной вами папке, а не в журнале.",
+                        )}
                       </p>
                     </div>
                     {history.length > 0 && (
@@ -722,13 +772,15 @@ export default function App() {
                         onClick={() => {
                           if (
                             window.confirm(
-                              "Очистить журнал сборок? Сохранённые ZIP останутся на диске.",
+                              t(
+                                "Очистить журнал сборок? Сохранённые ZIP останутся на диске.",
+                              ),
                             )
                           )
                             setHistory([]);
                         }}
                       >
-                        Очистить журнал
+                        {t("Очистить журнал")}
                       </button>
                     )}
                   </div>
@@ -743,12 +795,12 @@ export default function App() {
                             <strong>{h.filename}</strong>
                             <small>
                               {gameInfo(h.game).name} ·{" "}
-                              {new Date(h.at).toLocaleString("ru-RU")}
+                              {new Date(h.at).toLocaleString(dateLocale())}
                             </small>
                           </div>
                           <span>{sizeLabel(h.size)}</span>
                           <span className="badge green">
-                            <Check size={12} /> Экспортирован
+                            <Check size={12} /> {t("Экспортирован")}
                           </span>
                         </div>
                       ))}
@@ -756,16 +808,18 @@ export default function App() {
                   ) : (
                     <div className="empty-state">
                       <FileArchive size={38} />
-                      <h3>Первый релиз ещё впереди</h3>
+                      <h3>{t("Первый релиз ещё впереди")}</h3>
                       <p>
-                        Соберите ZIP в редакторе проекта — запись появится
-                        здесь.
+                        {t(
+                          "Соберите ZIP в редакторе проекта — запись появится здесь.",
+                        )}
                       </p>
                       <button
                         className="button"
                         onClick={() => navigate("projects")}
                       >
-                        К проектам <ArrowRight size={15} />
+                        {t("К проектам")}
+                        <ArrowRight size={15} />
                       </button>
                     </div>
                   )}
@@ -782,12 +836,13 @@ export default function App() {
         </main>
         <footer className="app-footer">
           <span>
-            <span className="status-dot" /> {saveState}
+            <span className="status-dot" /> {t(saveState)}
           </span>
           <span>
             {window.tsat ? "DESKTOP" : "WEB PREVIEW"}
-            <span className="footer-separator">/</span>Сделано для тех, кто
-            создаёт <Zap size={12} />
+            <span className="footer-separator">/</span>
+            {t("Сделано для тех, кто создаёт")}
+            <Zap size={12} />
           </span>
         </footer>
       </div>
@@ -802,7 +857,7 @@ export default function App() {
             setActiveId(p.id);
             setPage("projects");
             setDialog(null);
-            notify("Проект создан. Начните с описания и файлов мода.");
+            notify(t("Проект создан. Начните с описания и файлов мода."));
           }}
         />
       )}
@@ -819,18 +874,20 @@ export default function App() {
       )}
       {deleteId && (
         <Modal
-          title="Удалить проект?"
-          subtitle="Это действие нельзя отменить."
+          title={t("Удалить проект?")}
+          subtitle={t("Это действие нельзя отменить.")}
           onClose={() => setDeleteId(null)}
         >
           <p className="modal-copy">
-            Проект «{projects.find((p) => p.id === deleteId)?.manifest.name}» и
-            его локальные файлы будут удалены. Уже экспортированные архивы
-            останутся на диске.
+            {t("Проект «")}
+            {projects.find((p) => p.id === deleteId)?.manifest.name}
+            {t(
+              "» и его локальные файлы будут удалены. Уже экспортированные архивы останутся на диске.",
+            )}
           </p>
           <div className="modal-actions">
             <button className="button" onClick={() => setDeleteId(null)}>
-              Отмена
+              {t("Отмена")}
             </button>
             <button
               className="button danger"
@@ -839,7 +896,7 @@ export default function App() {
                 setDeleteId(null);
               }}
             >
-              Удалить проект
+              {t("Удалить проект")}
             </button>
           </div>
         </Modal>
@@ -853,7 +910,7 @@ export default function App() {
           <button
             className="icon-button"
             onClick={() => setToast("")}
-            aria-label="Закрыть уведомление"
+            aria-label={t("Закрыть уведомление")}
           >
             <X size={16} />
           </button>
@@ -926,13 +983,13 @@ function ProjectCard({
       <button
         className="project-art"
         onClick={onOpen}
-        aria-label={`Открыть ${p.manifest.name}`}
+        aria-label={t("Открыть {0}", p.manifest.name)}
       >
         <img src={`./art/${g.art}.svg`} alt="" />
         <span className="art-shade" />
         <span className="game-name">{g.name}</span>
         <span className="art-tag">
-          <span /> {p.template ? "Шаблон" : "Проект"}
+          <span /> {p.template ? t("Шаблон") : t("Проект")}
         </span>
         <span className="art-monogram" style={{ background: g.color }}>
           {p.manifest.name[0]}
@@ -946,7 +1003,7 @@ function ProjectCard({
           <div className="menu-container">
             <button
               className="icon-button"
-              aria-label={`Действия с ${p.manifest.name}`}
+              aria-label={t("Действия с {0}", p.manifest.name)}
               aria-expanded={menu}
               onClick={() => setMenu(!menu)}
             >
@@ -956,7 +1013,7 @@ function ProjectCard({
               <>
                 <button
                   className="menu-backdrop"
-                  aria-label="Закрыть меню"
+                  aria-label={t("Закрыть меню")}
                   onClick={() => setMenu(false)}
                 />
                 <div className="dropdown">
@@ -966,7 +1023,7 @@ function ProjectCard({
                       setMenu(false);
                     }}
                   >
-                    <Copy size={14} /> Дублировать
+                    <Copy size={14} /> {t("Дублировать")}
                   </button>
                   <button
                     onClick={() => {
@@ -974,7 +1031,7 @@ function ProjectCard({
                       setMenu(false);
                     }}
                   >
-                    <Trash2 size={14} /> Удалить
+                    <Trash2 size={14} /> {t("Удалить")}
                   </button>
                 </div>
               </>
@@ -983,24 +1040,33 @@ function ProjectCard({
         </div>
         <p className="project-description">
           {p.manifest.description ||
-            "У каждой идеи есть начало. Добавьте описание."}
+            t("У каждой идеи есть начало. Добавьте описание.")}
         </p>
         <div className="project-meta">
           <span className="version">v{p.manifest.version_number}</span>
           <span className="badge">
             <span className="draft-dot" />
-            {p.template ? "Для знакомства" : "Черновик"}
+            {p.template ? t("Для знакомства") : t("Черновик")}
           </span>
-          <span>{p.files.length} файлов</span>
+          <span>
+            {p.files.length} {t("файлов")}
+          </span>
         </div>
         <div className="project-card-footer">
           <span>
             {p.template
-              ? "Готов к вашей идее"
-              : `Изменён ${new Date(p.updatedAt).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}`}
+              ? t("Готов к вашей идее")
+              : t(
+                  "Изменён {0}",
+                  new Date(p.updatedAt).toLocaleDateString(dateLocale(), {
+                    day: "numeric",
+                    month: "short",
+                  }),
+                )}
           </span>
           <button onClick={onOpen}>
-            Открыть проект <ArrowRight size={14} />
+            {t("Открыть проект")}
+            <ArrowRight size={14} />
           </button>
         </div>
       </div>
@@ -1023,8 +1089,8 @@ function NewProjectDialog({
   const [error, setError] = useState("");
   return (
     <Modal
-      title="Давайте создадим что-то новое"
-      subtitle="Небольшая идея сегодня. Любимый мод завтра."
+      title={t("Давайте создадим что-то новое")}
+      subtitle={t("Небольшая идея сегодня. Любимый мод завтра.")}
       onClose={onClose}
     >
       <form
@@ -1034,13 +1100,13 @@ function NewProjectDialog({
           try {
             await onCreate(name, chosen === "custom" ? custom : chosen);
           } catch {
-            setError("Не удалось создать проект. Попробуйте ещё раз.");
+            setError(t("Не удалось создать проект. Попробуйте ещё раз."));
             setBusy(false);
           }
         }}
       >
         <label className="field">
-          Название пакета
+          {t("Название пакета")}
           <input
             autoFocus
             required
@@ -1050,49 +1116,52 @@ function NewProjectDialog({
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-          <small>Латинские буквы, цифры и подчёркивания. Без пробелов.</small>
+          <small>
+            {t("Латинские буквы, цифры и подчёркивания. Без пробелов.")}
+          </small>
         </label>
         <label className="field">
-          Для какой игры?
+          {t("Для какой игры?")}
           <select value={chosen} onChange={(e) => setChosen(e.target.value)}>
             {games.map((g) => (
               <option value={g.id} key={g.id}>
                 {g.name}
               </option>
             ))}
-            <option value="custom">Другое сообщество…</option>
+            <option value="custom">{t("Другое сообщество…")}</option>
           </select>
         </label>
         {chosen === "custom" && (
           <label className="field">
-            Идентификатор сообщества
+            {t("Идентификатор сообщества")}
             <input
               required
               pattern="[a-z0-9]+(-[a-z0-9]+)*"
-              placeholder="из thunderstore.io/c/идентификатор/"
+              placeholder={t("из thunderstore.io/c/идентификатор/")}
               value={custom}
               onChange={(e) => setCustom(e.target.value)}
             />
             <small>
-              Скопируйте сегмент URL после /c/ на сайте Thunderstore.
+              {t("Скопируйте сегмент URL после /c/ на сайте Thunderstore.")}
             </small>
           </label>
         )}
         <div className="info-strip">
           <ShieldCheck size={19} />
           <span>
-            Мы подготовим manifest, README и иконку 256 × 256. Всё можно
-            изменить позже.
+            {t(
+              "Мы подготовим manifest, README и иконку 256 × 256. Всё можно изменить позже.",
+            )}
           </span>
         </div>
         {error && <p className="error-text">{error}</p>}
         <div className="modal-actions">
           <button type="button" className="button" onClick={onClose}>
-            Отмена
+            {t("Отмена")}
           </button>
           <button className="button primary" disabled={busy}>
             {busy ? <Loader2 size={16} className="spin" /> : <Plus size={16} />}
-            Создать проект
+            {t("Создать проект")}
           </button>
         </div>
       </form>
@@ -1117,7 +1186,7 @@ function Appearance({
       !["image/png", "image/jpeg", "image/webp"].includes(file.type) ||
       file.size > 5 * 1024 * 1024
     ) {
-      notify("Выберите PNG, JPG или WebP до 5 МБ.");
+      notify(t("Выберите PNG, JPG или WebP до 5 МБ."));
       return;
     }
     const r = new FileReader();
@@ -1126,19 +1195,41 @@ function Appearance({
   }
   return (
     <Modal
-      title="Ваше пространство. Ваше настроение."
-      subtitle="Настройки сохраняются только на этом устройстве."
+      title={t("Ваше пространство. Ваше настроение.")}
+      subtitle={t("Настройки сохраняются только на этом устройстве.")}
       onClose={onClose}
       wide
     >
       <div className="setting-section">
-        <h3>Оформление</h3>
+        <h3>{t("Язык интерфейса")}</h3>
+        <div className="segmented">
+          <button
+            className={p.language === "ru" ? "selected" : ""}
+            onClick={() => set({ language: "ru" })}
+          >
+            Русский
+          </button>
+          <button
+            className={p.language === "en" ? "selected" : ""}
+            onClick={() => set({ language: "en" })}
+          >
+            English
+          </button>
+        </div>
+        <p className="field-help">
+          {t(
+            "Шаблоны README и CHANGELOG всегда на английском. Ваши тексты не переводятся.",
+          )}
+        </p>
+      </div>
+      <div className="setting-section">
+        <h3>{t("Оформление")}</h3>
         <div className="theme-options">
-          {(["light", "dark"] as const).map((t) => (
+          {(["light", "dark"] as const).map((theme) => (
             <button
-              key={t}
-              className={`theme-option ${t} ${p.theme === t ? "chosen" : ""}`}
-              onClick={() => set({ theme: t })}
+              key={theme}
+              className={`theme-option ${theme} ${p.theme === theme ? "chosen" : ""}`}
+              onClick={() => set({ theme: theme })}
             >
               <span className="theme-mini">
                 <i />
@@ -1146,16 +1237,16 @@ function Appearance({
                 <i />
               </span>
               <span>
-                {t === "light" ? <Sun size={16} /> : <Moon size={16} />}
-                {t === "light" ? "Светлая" : "Тёмная"}
-                {p.theme === t && <Check size={15} />}
+                {theme === "light" ? <Sun size={16} /> : <Moon size={16} />}
+                {theme === "light" ? t("Светлая") : t("Тёмная")}
+                {p.theme === theme && <Check size={15} />}
               </span>
             </button>
           ))}
         </div>
       </div>
       <div className="setting-section">
-        <h3>Цвет акцента</h3>
+        <h3>{t("Цвет акцента")}</h3>
         <div className="accent-options">
           {[
             "#247d60",
@@ -1167,18 +1258,18 @@ function Appearance({
           ].map((c) => (
             <button
               key={c}
-              aria-label={`Акцент ${c}`}
+              aria-label={t("Акцент {0}", c)}
               style={{ background: c }}
               onClick={() => set({ accent: c })}
             >
               {p.accent === c && <Check size={18} />}
             </button>
           ))}
-          <label className="custom-color" title="Свой цвет">
+          <label className="custom-color" title={t("Свой цвет")}>
             <Plus size={19} />
             <input
               type="color"
-              aria-label="Свой цвет акцента"
+              aria-label={t("Свой цвет акцента")}
               value={p.accent}
               onChange={(e) => set({ accent: e.target.value })}
             />
@@ -1187,14 +1278,15 @@ function Appearance({
       </div>
       <div className="setting-section">
         <h3>
-          Атмосфера <span className="muted">немного магии на фоне</span>
+          {t("Атмосфера")}
+          <span className="muted">{t("немного магии на фоне")}</span>
         </h3>
         <div className="segmented">
           {(
             [
-              ["none", Sun, "Без эффектов"],
-              ["snow", Snowflake, "Снег"],
-              ["rain", CloudRain, "Дождь"],
+              ["none", Sun, t("Без эффектов")],
+              ["snow", Snowflake, t("Снег")],
+              ["rain", CloudRain, t("Дождь")],
             ] as const
           ).map(([id, Icon, label]) => (
             <button
@@ -1208,18 +1300,20 @@ function Appearance({
           ))}
         </div>
         <p className="field-help">
-          Анимация отключается, если в системе включено уменьшение движения.
+          {t(
+            "Анимация отключается, если в системе включено уменьшение движения.",
+          )}
         </p>
       </div>
       <div className="setting-section">
-        <h3>Свой фон</h3>
+        <h3>{t("Свой фон")}</h3>
         <label className="background-upload">
           <Upload size={21} />
           <span>
             {p.background
-              ? "Заменить изображение"
-              : "Выберите что-то вдохновляющее"}
-            <small>PNG, JPG, WebP · до 5 МБ</small>
+              ? t("Заменить изображение")
+              : t("Выберите что-то вдохновляющее")}
+            <small>{t("PNG, JPG, WebP · до 5 МБ")}</small>
           </span>
           <input
             type="file"
@@ -1230,7 +1324,8 @@ function Appearance({
         {p.background && (
           <div className="background-controls">
             <label>
-              Видимость · {p.opacity}%
+              {t("Видимость ·")}
+              {p.opacity}%
               <input
                 type="range"
                 min="5"
@@ -1244,35 +1339,35 @@ function Appearance({
               onClick={() => set({ background: "" })}
             >
               <Trash2 size={14} />
-              Удалить фон
+              {t("Удалить фон")}
             </button>
           </div>
         )}
       </div>
       <div className="setting-section">
-        <h3>Плотность интерфейса</h3>
+        <h3>{t("Плотность интерфейса")}</h3>
         <div className="segmented">
           <button
             className={p.density === "comfortable" ? "selected" : ""}
             onClick={() => set({ density: "comfortable" })}
           >
-            Комфортная
+            {t("Комфортная")}
           </button>
           <button
             className={p.density === "compact" ? "selected" : ""}
             onClick={() => set({ density: "compact" })}
           >
-            Компактная
+            {t("Компактная")}
           </button>
         </div>
       </div>
       <div className="modal-actions">
         <button className="button subtle" onClick={() => onChange(defaults)}>
-          Сбросить настройки
+          {t("Сбросить настройки")}
         </button>
         <button className="button primary" onClick={onClose}>
           <Check size={16} />
-          Вот так нравится
+          {t("Вот так нравится")}
         </button>
       </div>
     </Modal>
@@ -1296,12 +1391,12 @@ function Account({
         setSaved(s.saved);
         setAvailable(s.available);
       })
-      .catch(() => notify("Защищённое хранилище недоступно."));
+      .catch(() => notify(t("Защищённое хранилище недоступно.")));
   }, []);
   return (
     <Modal
-      title="Ближе к вашему сообществу"
-      subtitle="Безопасное подключение к Thunderstore"
+      title={t("Ближе к вашему сообществу")}
+      subtitle={t("Безопасное подключение к Thunderstore")}
       onClose={onClose}
     >
       <div className="account-visual">
@@ -1318,30 +1413,33 @@ function Account({
       <div className="info-strip">
         <ShieldCheck size={20} />
         <span>
-          Здесь нет неофициального OAuth. Входите на сайте, а для публикации из
-          EXE используйте токен service account вашей команды.
+          {t(
+            "Здесь нет неофициального OAuth. Входите на сайте, а для публикации из EXE используйте токен service account вашей команды.",
+          )}
         </span>
       </div>
       <ol className="account-steps">
         <li>
-          <strong>Войдите на официальном сайте</strong>
+          <strong>{t("Войдите на официальном сайте")}</strong>
           <p>
-            Авторизация откроется в системном браузере. TSAT не видит пароль и
-            cookies.
+            {t(
+              "Авторизация откроется в системном браузере. TSAT не видит пароль и cookies.",
+            )}
           </p>
           <button
             className="button"
             onClick={() => openExternal("https://thunderstore.io/")}
           >
             <ExternalLink size={15} />
-            Открыть Thunderstore
+            {t("Открыть Thunderstore")}
           </button>
         </li>
         <li>
-          <strong>Создайте токен команды</strong>
+          <strong>{t("Создайте токен команды")}</strong>
           <p>
-            Settings → Teams → ваша команда → Service accounts. Создайте
-            отдельную учётную запись для TSAT.
+            {t(
+              "Settings → Teams → ваша команда → Service accounts. Создайте отдельную учётную запись для TSAT.",
+            )}
           </p>
           <button
             className="text-button"
@@ -1349,14 +1447,16 @@ function Account({
               openExternal("https://thunderstore.io/settings/teams/")
             }
           >
-            Перейти к командам <ArrowRight size={14} />
+            {t("Перейти к командам")}
+            <ArrowRight size={14} />
           </button>
         </li>
         <li>
-          <strong>Подключите её в приложении</strong>
+          <strong>{t("Подключите её в приложении")}</strong>
           <p>
-            Токен шифруется через Electron safeStorage (DPAPI на Windows). Он не
-            попадает в архивы или браузерное хранилище.
+            {t(
+              "Токен шифруется через Electron safeStorage (DPAPI на Windows). Он не попадает в архивы или браузерное хранилище.",
+            )}
           </p>
         </li>
       </ol>
@@ -1370,7 +1470,9 @@ function Account({
               setToken("");
               setSaved(true);
               notify(
-                "Токен зашифрован и сохранён. Права будут проверены Thunderstore при публикации.",
+                t(
+                  "Токен зашифрован и сохранён. Права будут проверены Thunderstore при публикации.",
+                ),
               );
             } catch (e) {
               notify((e as Error).message);
@@ -1387,7 +1489,7 @@ function Account({
               spellCheck={false}
               value={token}
               onChange={(e) => setToken(e.target.value)}
-              placeholder="Вставьте токен команды"
+              placeholder={t("Вставьте токен команды")}
               disabled={!available || busy}
               required
             />
@@ -1395,7 +1497,7 @@ function Account({
           {saved && (
             <p className="saved-token">
               <ShieldCheck size={16} />
-              Токен сохранён · права ещё не проверены
+              {t("Токен сохранён · права ещё не проверены")}
             </p>
           )}
           <div className="modal-actions">
@@ -1408,26 +1510,30 @@ function Account({
                     await window.tsat!.deleteToken();
                     setSaved(false);
                     notify(
-                      "Токен удалён с устройства. При необходимости отзовите его и на сайте.",
+                      t(
+                        "Токен удалён с устройства. При необходимости отзовите его и на сайте.",
+                      ),
                     );
                   } catch {
-                    notify("Не удалось удалить токен.");
+                    notify(t("Не удалось удалить токен."));
                   }
                 }}
               >
-                Отключить
+                {t("Отключить")}
               </button>
             )}
             <button
               className="button primary"
               disabled={!available || busy || !token.trim()}
             >
-              {busy ? "Сохранение…" : "Сохранить безопасно"}
+              {busy ? t("Сохранение…") : t("Сохранить безопасно")}
             </button>
           </div>
           {!available && (
             <p className="field-help">
-              Системное шифрование недоступно. Сохранение токена заблокировано.
+              {t(
+                "Системное шифрование недоступно. Сохранение токена заблокировано.",
+              )}
             </p>
           )}
         </form>
@@ -1435,10 +1541,11 @@ function Account({
         <div className="desktop-only">
           <HardDrive size={21} />
           <div>
-            <strong>Токен подключается только в EXE</strong>
+            <strong>{t("Токен подключается только в EXE")}</strong>
             <p>
-              В веб-превью можно собрать ZIP и загрузить его на сайт вручную.
-              Секреты здесь не сохраняются.
+              {t(
+                "В веб-превью можно собрать ZIP и загрузить его на сайт вручную. Секреты здесь не сохраняются.",
+              )}
             </p>
           </div>
         </div>
@@ -1459,68 +1566,82 @@ function Guide({
         <span className="soft-icon">
           <BookOpen size={24} />
         </span>
-        <h2>Ваш первый мод в TSAT</h2>
+        <h2>{t("Ваш первый мод в TSAT")}</h2>
         <p>
-          TSAT — упаковщик и рабочее пространство автора. Он не устанавливает
-          моды в игру и не заменяет r2modman.
+          {t(
+            "TSAT — упаковщик и рабочее пространство автора. Он не устанавливает моды в игру и не заменяет r2modman.",
+          )}
         </p>
         <Step
           number="01"
-          title="Создайте проект для своей игры"
-          text="Выберите сообщество или укажите его URL-идентификатор. Примеры в библиотеке — пустые шаблоны, а не готовые моды."
+          title={t("Создайте проект для своей игры")}
+          text={t(
+            "Выберите сообщество или укажите его URL-идентификатор. Примеры в библиотеке — пустые шаблоны, а не готовые моды.",
+          )}
         />
         <Step
           number="02"
-          title="Расскажите о своём моде"
-          text="Заполните manifest, версию и описание. Добавьте README с инструкцией и PNG-иконку 256 × 256."
+          title={t("Расскажите о своём моде")}
+          text={t(
+            "Заполните manifest, версию и описание. Добавьте README с инструкцией и PNG-иконку 256 × 256.",
+          )}
         />
         <Step
           number="03"
-          title="Добавьте файлы и зависимости"
-          text="Загрузите папку мода с нужной структурой. Для зависимости укажите полное имя: Author-Package-1.0.0. Загрузчик и его версию выбираете вы."
+          title={t("Добавьте файлы и зависимости")}
+          text={t(
+            "Загрузите папку мода с нужной структурой. Для зависимости укажите полное имя: Author-Package-1.0.0. Загрузчик и его версию выбираете вы.",
+          )}
         />
         <Step
           number="04"
-          title="Проверьте и соберите ZIP"
-          text="TSAT проверяет локальные правила. Manifest, README и icon.png окажутся в корне, ваши вложенные папки сохранят структуру."
+          title={t("Проверьте и соберите ZIP")}
+          text={t(
+            "TSAT проверяет локальные правила. Manifest, README и icon.png окажутся в корне, ваши вложенные папки сохранят структуру.",
+          )}
         />
         <Step
           number="05"
-          title="Опубликуйте, когда будете готовы"
-          text="Загрузите ZIP на сайт или подключите токен в EXE для API-публикации. Сервер проверит права, зависимости и уникальность версии."
+          title={t("Опубликуйте, когда будете готовы")}
+          text={t(
+            "Загрузите ZIP на сайт или подключите токен в EXE для API-публикации. Сервер проверит права, зависимости и уникальность версии.",
+          )}
         />
         <button className="button primary" onClick={onCreate}>
-          Создать первый проект <ArrowRight size={16} />
+          {t("Создать первый проект")}
+          <ArrowRight size={16} />
         </button>
       </section>
       <aside className="guide-side">
         <section className="panel">
           <ShieldCheck size={26} />
-          <h3>Локально — значит у вас</h3>
+          <h3>{t("Локально — значит у вас")}</h3>
           <p>
-            Проекты и файлы сохраняются в IndexedDB этого приложения. Резервные
-            копии делайте через экспорт ZIP: очистка данных приложения удаляет
-            библиотеку.
+            {t(
+              "Проекты и файлы сохраняются в IndexedDB этого приложения. Резервные копии делайте через экспорт ZIP: очистка данных приложения удаляет библиотеку.",
+            )}
           </p>
         </section>
         <section className="panel">
           <UserRound size={25} />
-          <h3>Безопасное подключение</h3>
+          <h3>{t("Безопасное подключение")}</h3>
           <p>
-            Не передавайте пароль от аккаунта сторонним программам. TSAT
-            использует отдельный токен команды.
+            {t(
+              "Не передавайте пароль от аккаунта сторонним программам. TSAT использует отдельный токен команды.",
+            )}
           </p>
           <button className="text-button" onClick={onAccount}>
-            Как подключиться <ArrowRight size={14} />
+            {t("Как подключиться")}
+            <ArrowRight size={14} />
           </button>
         </section>
         <section className="panel">
           <CircleHelp size={25} />
-          <h3>Ранний доступ</h3>
+          <h3>{t("Ранний доступ")}</h3>
           <p>
-            API Thunderstore может меняться. Установщик пока без цифровой
-            подписи, поэтому Windows может показывать предупреждение
-            SmartScreen.
+            {t(
+              "API Thunderstore может меняться. Установщик пока без цифровой подписи, поэтому Windows может показывать предупреждение SmartScreen.",
+            )}
           </p>
           <button
             className="text-button"
@@ -1530,7 +1651,8 @@ function Guide({
               )
             }
           >
-            Сообщить о проблеме <ExternalLink size={14} />
+            {t("Сообщить о проблеме")}
+            <ExternalLink size={14} />
           </button>
         </section>
       </aside>

@@ -1,5 +1,6 @@
 interface Window {
   tsat?: {
+    setLanguage(language: "ru" | "en"): Promise<void>;
     saveArchive(bytes: Uint8Array, filename: string): Promise<boolean>;
     openExternal(url: string): Promise<void>;
     catalog(

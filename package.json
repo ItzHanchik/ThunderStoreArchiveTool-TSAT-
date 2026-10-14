@@ -2,7 +2,7 @@
   "name": "tsat",
   "version": "0.1.0",
   "private": true,
-  "description": "ThunderStore Archive Tool — a calmer workspace for mod creators",
+  "description": "ThunderStore Archive Tool \u2014 a calmer workspace for mod creators",
   "author": "ItzHanchik",
   "license": "MIT",
   "main": "electron/main.cjs",
@@ -45,7 +45,8 @@
     "files": [
       "dist/**/*",
       "electron/**/*",
-      "package.json"
+      "package.json",
+      "shared/**/*"
     ],
     "asar": true,
     "win": {

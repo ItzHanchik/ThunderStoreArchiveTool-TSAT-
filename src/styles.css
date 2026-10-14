@@ -3196,3 +3196,19 @@ h1 {
     display: none;
   }
 }
+.template-tools {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin: 0 0 16px;
+  flex-wrap: wrap;
+}
+.template-tools > span {
+  font-size: 9px;
+  color: var(--muted);
+}
+.language-toggle {
+  min-width: 34px;
+  padding: 0 7px;
+  font-size: 9px;
+}
