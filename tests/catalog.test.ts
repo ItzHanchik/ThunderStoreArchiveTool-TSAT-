@@ -30,7 +30,7 @@ describe("read-only Thunderstore catalog", () => {
       .fn()
       .mockResolvedValue(json({ results: [], next: "https://evil.test" }));
     await expect(catalog("communities", {}, fetcher)).rejects.toThrow(
-      "пагинация",
+      "pagination",
     );
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
@@ -72,7 +72,7 @@ describe("read-only Thunderstore catalog", () => {
         "bad",
         vi.fn().mockResolvedValue(json({ username: null, teams: [] })),
       ),
-    ).rejects.toThrow("авторизацию");
+    ).rejects.toThrow("authenticate");
   });
   it("does not expose an authentication error response body", async () => {
     await expect(

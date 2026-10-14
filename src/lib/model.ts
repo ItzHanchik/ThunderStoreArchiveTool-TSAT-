@@ -1,3 +1,4 @@
+import { defaultIcon, type IconDesign } from "./icon";
 import { modReadme, modChangelog } from "./templates";
 import { t } from "./i18n";
 export interface Manifest {
@@ -20,6 +21,7 @@ export interface Project {
   changelog: string;
   files: Asset[];
   icon?: Uint8Array;
+  iconDesign?: IconDesign;
   updatedAt: number;
   createdAt: number;
   template?: boolean;
@@ -43,7 +45,7 @@ export interface Preferences {
   opacity: number;
 }
 export const defaults: Preferences = {
-  language: "ru",
+  language: "en",
   theme: "light",
   accent: "#247d60",
   weather: "none",
@@ -169,6 +171,7 @@ export function newProject(
     readme: modReadme(name, gameInfo(game).name),
     changelog: modChangelog(),
     files: [],
+    iconDesign: defaultIcon(gameInfo(game).color, name),
     updatedAt: Date.now(),
     createdAt: Date.now(),
     template,

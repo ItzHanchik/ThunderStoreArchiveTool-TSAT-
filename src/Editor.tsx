@@ -1,6 +1,13 @@
 import { modReadme, modChangelog } from "./lib/templates";
 import { t } from "./lib/i18n";
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from "react";
 import Markdown from "react-markdown";
 import {
   ArrowLeft,
@@ -39,14 +46,18 @@ import {
   safePath,
   validate,
 } from "./lib/package";
-import { createIcon, openExternal } from "./lib/storage";
+import { openExternal } from "./lib/storage";
 import { Modal } from "./components";
+
+const DocumentWizard = lazy(() => import("./DocumentWizard"));
+const IconStudio = lazy(() => import("./IconStudio"));
 
 type Tab = "manifest" | "files" | "readme" | "dependencies" | "checks";
 interface Props {
   project: Project;
   onChange: (p: Project) => void;
   onBack: () => void;
+  onDelete: () => void;
   onBuild: () => void;
   building: boolean;
   notify: (s: string) => void;
@@ -56,11 +67,22 @@ export default function Editor({
   project: p,
   onChange,
   onBack,
+  onDelete,
   onBuild,
   building,
   notify,
   onAccount,
 }: Props) {
+  const [wizard, setWizard] = useState(false);
+  const [studio, setStudio] = useState(false);
+  const [documentBackup, setDocumentBackup] = useState<Pick<
+    Project,
+    "readme" | "changelog"
+  > | null>(null);
+  const [iconBackup, setIconBackup] = useState<Pick<
+    Project,
+    "icon" | "iconDesign"
+  > | null>(null);
   const [tab, setTab] = useState<Tab>("manifest");
   const [doc, setDoc] = useState<"readme" | "changelog">("readme");
   const [preview, setPreview] = useState(false);
@@ -118,6 +140,7 @@ export default function Editor({
           if (!isPng256(data))
             throw new Error(t("icon.png должен быть PNG 256 × 256."));
           next.icon = data;
+          next.iconDesign = undefined;
         } else if (lower === "readme.md" || lower === "changelog.md") {
           if (data.length > 1024 * 1024)
             throw new Error(t("Документ Markdown должен быть меньше 1 МБ."));
@@ -200,7 +223,7 @@ export default function Editor({
         throw new Error(t("Выберите PNG размером ровно 256 × 256."));
       const bitmap = await createImageBitmap(file);
       bitmap.close();
-      onChange({ ...p, icon: data });
+      onChange({ ...p, iconDesign: undefined, icon: data });
     } catch (e) {
       notify((e as Error).message);
     } finally {
@@ -262,6 +285,14 @@ export default function Editor({
           </p>
         </div>
         <div className="editor-actions">
+          <button
+            className="button danger"
+            onClick={onDelete}
+            disabled={building || importing}
+          >
+            <Trash2 size={16} />
+            {t("Удалить проект")}
+          </button>
           <button className="button" onClick={() => setPublish(true)}>
             <Rocket size={16} />
             {t("Публикация")}
@@ -309,6 +340,7 @@ export default function Editor({
             ).map(([id, Icon, title]) => (
               <button
                 className={tab === id ? "selected" : ""}
+                aria-current={tab === id ? "page" : undefined}
                 onClick={() => setTab(id)}
                 key={id}
               >
@@ -433,23 +465,22 @@ export default function Editor({
                         />
                       </label>
                       <button
-                        className="text-button"
-                        onClick={async () => {
-                          try {
-                            onChange({
-                              ...p,
-                              icon: await createIcon(
-                                game.color,
-                                p.manifest.name || "T",
-                              ),
-                            });
-                          } catch {
-                            notify(t("Не удалось создать иконку."));
-                          }
-                        }}
+                        className="button small"
+                        onClick={() => setStudio(true)}
                       >
-                        {t("Сгенерировать букву")}
+                        {t("Настроить иконку")}
                       </button>
+                      {iconBackup && (
+                        <button
+                          className="text-button"
+                          onClick={() => {
+                            onChange({ ...p, ...iconBackup });
+                            setIconBackup(null);
+                          }}
+                        >
+                          {t("Вернуть прежнюю иконку")}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -635,6 +666,34 @@ export default function Editor({
                     {preview ? t("Редактировать") : t("Предпросмотр")}
                   </button>
                 </div>
+                <div className="document-assistant">
+                  <div>
+                    <h3>{t("Документы без пустого листа")}</h3>
+                    <p>
+                      {t(
+                        "Расскажите о моде и изменениях — мастер соберёт оба документа.",
+                      )}
+                    </p>
+                  </div>
+                  <button
+                    className="button primary small"
+                    onClick={() => setWizard(true)}
+                  >
+                    <FileText size={16} />
+                    {t("Ответить на вопросы")}
+                  </button>
+                </div>
+                {documentBackup && (
+                  <button
+                    className="text-button undo-documents"
+                    onClick={() => {
+                      onChange({ ...p, ...documentBackup });
+                      setDocumentBackup(null);
+                    }}
+                  >
+                    {t("Вернуть прежние документы")}
+                  </button>
+                )}
                 <div className="template-tools">
                   <button
                     className="text-button"
@@ -648,6 +707,10 @@ export default function Editor({
                         )
                       )
                         return;
+                      setDocumentBackup({
+                        readme: p.readme,
+                        changelog: p.changelog,
+                      });
                       onChange({
                         ...p,
                         [doc]:
@@ -832,13 +895,29 @@ export default function Editor({
                         <strong>{c.title}</strong>
                         <p>{c.detail}</p>
                       </div>
-                      <span>
-                        {c.status === "ok"
-                          ? t("Готово")
-                          : c.status === "error"
-                            ? t("Исправить")
-                            : t("Важно")}
-                      </span>
+                      {c.status === "error" ? (
+                        <button
+                          className="text-button"
+                          onClick={() => {
+                            setTab(
+                              c.id === "dependencies"
+                                ? "dependencies"
+                                : c.id === "readme"
+                                  ? "readme"
+                                  : ["paths", "size"].includes(c.id)
+                                    ? "files"
+                                    : "manifest",
+                            );
+                          }}
+                        >
+                          {t("Исправить")}
+                          <ArrowRight size={14} />
+                        </button>
+                      ) : (
+                        <span>
+                          {c.status === "ok" ? t("Готово") : t("Важно")}
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -908,7 +987,7 @@ export default function Editor({
             <div className="readiness-bar">
               <span
                 style={{
-                  width: `${(checks.filter((c) => c.status === "ok").length / 9) * 100}%`,
+                  width: `${(checks.filter((c) => c.status === "ok").length / Math.max(1, checks.length)) * 100}%`,
                 }}
               />
             </div>
@@ -927,6 +1006,34 @@ export default function Editor({
           </div>
         </aside>
       </div>
+      <Suspense fallback={null}>
+        {wizard && (
+          <DocumentWizard
+            project={p}
+            onClose={() => setWizard(false)}
+            onApply={(readme, changelog) => {
+              setDocumentBackup({ readme: p.readme, changelog: p.changelog });
+              onChange({ ...p, readme, changelog });
+              setWizard(false);
+              setPreview(true);
+              notify(
+                t("Документы созданы. Проверьте текст перед публикацией."),
+              );
+            }}
+          />
+        )}
+        {studio && (
+          <IconStudio
+            project={p}
+            onClose={() => setStudio(false)}
+            onApply={(icon, iconDesign) => {
+              setIconBackup({ icon: p.icon, iconDesign: p.iconDesign });
+              onChange({ ...p, icon, iconDesign });
+              setStudio(false);
+            }}
+          />
+        )}
+      </Suspense>
       {publish && (
         <PublishDialog
           project={p}
@@ -1132,7 +1239,12 @@ function PublishDialog({
                     setResult(r.url);
                     notify(t("Thunderstore принял пакет."));
                   } catch (e) {
-                    setError((e as Error).message);
+                    setError(
+                      (e as Error).message.replace(
+                        /^Error invoking remote method 'package:publish': Error: /,
+                        "",
+                      ),
+                    );
                   } finally {
                     setBusy(false);
                   }

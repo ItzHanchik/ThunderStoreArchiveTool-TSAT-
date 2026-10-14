@@ -11,6 +11,7 @@ function reportFailure(error) {
   process.exit(1);
 }
 import { _electron as electron } from "playwright";
+import { featureSmoke } from "./ui-smoke.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -23,6 +24,11 @@ try {
   const page = await app.firstWindow();
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  await page.getByRole("heading", { name: "My projects." }).waitFor();
+  assert.equal(await page.locator("html").getAttribute("lang"), "en");
+  await page
+    .getByRole("button", { name: "Русский / English", exact: true })
+    .click();
   await page.getByRole("heading", { name: "Мои проекты." }).waitFor();
   assert.equal(await page.locator(".project-card").count(), 3);
   const security = await app.evaluate(({ BrowserWindow }) => {
@@ -132,6 +138,7 @@ try {
     .getByRole("button", { name: "Русский / English", exact: true })
     .click();
   await page.getByRole("button", { name: "Все проекты", exact: true }).click();
+  await featureSmoke(page);
   assert.deepEqual(errors, []);
   await fs.mkdir("test-results", { recursive: true });
   await page.screenshot({

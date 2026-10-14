@@ -33,48 +33,72 @@ describe("publishing security and contract", () => {
     expect(
       allowedUpload("https://bucket.s3.amazonaws.com/key?signature=x"),
     ).toBe(true));
+  it.each([
+    "https://s3.us-west-004.backblazeb2.com/bucket/key?X-Amz-Signature=secret",
+    "https://thunderstore.s3.us-west-004.backblazeb2.com/key",
+    "https://bucket.r2.cloudflarestorage.com/key",
+  ])("accepts supported S3-compatible storage %s", (url) =>
+    expect(allowedUpload(url)).toBe(true),
+  );
+  it.each([
+    "https://s3.us-west-004.backblazeb2.com.evil.test/key",
+    "http://s3.us-west-004.backblazeb2.com/key",
+    "https://user@s3.us-west-004.backblazeb2.com/key",
+    "https://s3.us-west-004.backblazeb2.com:444/key",
+    "https://127.0.0.1/key",
+    "https://localhost/key",
+    "file:///etc/passwd",
+    "https://evilbackblazeb2.com/key",
+  ])("rejects unsafe storage variant %s", (url) =>
+    expect(allowedUpload(url)).toBe(false),
+  );
   it("rejects injected metadata", () =>
     expect(() =>
       validateMetadata({ ...metadata, community: "../bad" }),
     ).toThrow());
-  it("follows multipart flow without leaking bearer to storage", async () => {
-    const network = vi
-      .fn()
-      .mockResolvedValueOnce(
-        json({
-          user_media: { uuid },
-          upload_urls: [
-            {
-              url: "https://bucket.s3.amazonaws.com/file",
-              offset: 0,
-              length: 4,
-              part_number: 1,
-            },
-          ],
-        }),
-      )
-      .mockResolvedValueOnce(new Response("", { headers: { etag: "part" } }))
-      .mockResolvedValueOnce(json({}))
-      .mockResolvedValueOnce(json({ package_version: { name: "Test" } }));
-    const result = await publishPackage(
-      Buffer.from("PKxx"),
-      metadata,
-      "secret-token",
-      network,
-    );
-    expect(network).toHaveBeenCalledTimes(4);
-    expect(network.mock.calls[0][1].headers.Authorization).toBe(
-      "Bearer secret-token",
-    );
-    expect(network.mock.calls[1][1].headers.Authorization).toBeUndefined();
-    expect(network.mock.calls[1][1].redirect).toBe("error");
-    expect(JSON.parse(network.mock.calls[3][1].body)).toMatchObject({
-      author_name: "Team",
-      upload_uuid: uuid,
-      communities: ["valheim"],
-    });
-    expect(result.url).toBe("https://thunderstore.io/c/valheim/p/Team/Test/");
-  });
+  it.each(["bucket.s3.amazonaws.com", "s3.us-west-004.backblazeb2.com"])(
+    "follows multipart flow on %s without leaking bearer to storage",
+    async (host) => {
+      const network = vi
+        .fn()
+        .mockResolvedValueOnce(
+          json({
+            user_media: { uuid },
+            upload_urls: [
+              {
+                url: `https://${host}/file`,
+                offset: 0,
+                length: 4,
+                part_number: 1,
+              },
+            ],
+          }),
+        )
+        .mockResolvedValueOnce(new Response("", { headers: { etag: "part" } }))
+        .mockResolvedValueOnce(json({}))
+        .mockResolvedValueOnce(json({ package_version: { name: "Test" } }));
+      const result = await publishPackage(
+        Buffer.from("PKxx"),
+        metadata,
+        "secret-token",
+        network,
+      );
+      expect(network).toHaveBeenCalledTimes(4);
+      expect(network.mock.calls[0][1].headers.Authorization).toBe(
+        "Bearer secret-token",
+      );
+      expect(network.mock.calls[1][1].headers.Authorization).toBeUndefined();
+      expect(network.mock.calls[1][1].redirect).toBe("error");
+      expect(network.mock.calls[1][1].headers["Content-Length"]).toBe("4");
+      expect(network.mock.calls[1][1].headers["Content-MD5"]).toBeTruthy();
+      expect(JSON.parse(network.mock.calls[3][1].body)).toMatchObject({
+        author_name: "Team",
+        upload_uuid: uuid,
+        communities: ["valheim"],
+      });
+      expect(result.url).toBe("https://thunderstore.io/c/valheim/p/Team/Test/");
+    },
+  );
   it("aborts invalid upload plans without sending package bytes", async () => {
     const network = vi
       .fn()
@@ -96,6 +120,62 @@ describe("publishing security and contract", () => {
       publishPackage(Buffer.from("PKxx"), metadata, "secret", network),
     ).rejects.toThrow();
     expect(network.mock.calls[1][0]).toContain("/abort-upload/");
+  });
+  it.each([
+    [{ offset: 1, length: 4, part_number: 1 }],
+    [{ offset: 0, length: 5, part_number: 1 }],
+    [{ offset: 0, length: 0, part_number: 1 }],
+    [{ offset: 0, length: 2, part_number: 1 }],
+    [
+      { offset: 0, length: 2, part_number: 1 },
+      { offset: 2, length: 2, part_number: 1 },
+    ],
+    [{ offset: 0, length: 4, part_number: 0 }],
+    [{ offset: 0, length: 4, part_number: 2 }],
+    [null],
+  ])("rejects invalid plan before any PUT %#", async (...plan) => {
+    const network = vi
+      .fn()
+      .mockResolvedValueOnce(
+        json({
+          user_media: { uuid },
+          upload_urls: plan.map(
+            (p) => p && { url: "https://bucket.s3.amazonaws.com/file", ...p },
+          ),
+        }),
+      )
+      .mockResolvedValueOnce(json({}));
+    await expect(
+      publishPackage(Buffer.from("PKxx"), metadata, "secret", network),
+    ).rejects.toThrow();
+    expect(network).toHaveBeenCalledTimes(2);
+    expect(network.mock.calls[1][0]).toContain("abort-upload");
+  });
+  it("reports only unsupported hostname, never signed URL or credentials", async () => {
+    const network = vi
+      .fn()
+      .mockResolvedValueOnce(
+        json({
+          user_media: { uuid },
+          upload_urls: [
+            {
+              url: "https://unknown.test/key?X-Amz-Signature=private",
+              offset: 0,
+              length: 4,
+              part_number: 1,
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(json({}));
+    let message = "";
+    try {
+      await publishPackage(Buffer.from("PKxx"), metadata, "secret", network);
+    } catch (e) {
+      message = (e as Error).message;
+    }
+    expect(message).toContain("unknown.test");
+    expect(message).not.toMatch(/private|secret|X-Amz/);
   });
   it("does not echo server error body or token", async () => {
     const network = vi

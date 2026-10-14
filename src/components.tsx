@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { t } from "./lib/i18n";
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { X } from "lucide-react";
@@ -24,7 +25,7 @@ export function Modal({
     const focusable = () =>
       Array.from(
         element?.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), input:not([disabled]), select, textarea, [tabindex="0"]',
+          'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex="0"]',
         ) ?? [],
       ).filter((e) => e.offsetParent !== null);
     (
@@ -54,7 +55,7 @@ export function Modal({
       previous?.focus();
     };
   }, []);
-  return (
+  return createPortal(
     <div
       className="modal-backdrop"
       onMouseDown={(e) => {
@@ -84,6 +85,7 @@ export function Modal({
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.querySelector(".app") ?? document.body,
   );
 }

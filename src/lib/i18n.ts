@@ -1,6 +1,6 @@
 import english from "../../shared/en.json";
 export type Language = "ru" | "en";
-let language: Language = "ru";
+let language: Language = "en";
 export function setLanguage(next: Language) {
   language = next === "en" ? "en" : "ru";
 }

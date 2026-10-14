@@ -1,5 +1,5 @@
 const english = require("./en.json");
-let language = "ru";
+let language = "en";
 function setLanguage(next) {
   language = next === "en" ? "en" : "ru";
 }
