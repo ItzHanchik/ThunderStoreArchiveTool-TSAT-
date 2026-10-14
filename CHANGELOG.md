@@ -11,4 +11,5 @@ First early-access implementation.
 - Electron sandbox, limited IPC, native save dialog, encrypted service-account token.
 - Experimental multipart API publication with explicit native confirmation.
 - Windows NSIS/portable targets and CI workflows; binaries not yet Windows-tested.
-- 46 automated packaging and mocked API tests.
+- Read-only online catalog, communities, token verification, metadata-only drafts.
+- 53 automated packaging and mocked API tests.
